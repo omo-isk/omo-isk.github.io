@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ChordFlow Loop Master</title>
+    <title>🎸ChordFlow Studio</title>
     <style>
         :root {
             --bg: #0f172a;
@@ -22,10 +22,11 @@
         * {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
+            outline: none;
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-family: system-ui, -apple-system, sans-serif;
             background: var(--bg);
             color: var(--text);
             margin: 0;
@@ -39,7 +40,7 @@
         header {
             background: var(--surface);
             height: 65px;
-            padding: 0 20px;
+            padding: 0 15px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -48,34 +49,57 @@
             flex-shrink: 0;
         }
 
+        .logo-group {
+            display: flex;
+            flex-direction: column;
+        }
+
         .logo {
             font-weight: 900;
-            font-size: 1.2rem;
-            color: var(--primary);
-            letter-spacing: 1px;
-            user-select: none;
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+
+            /* ここからグラデーションの設定 */
+            background: linear-gradient(90deg, #11998e, #38ef7d);
+            /* 紫〜ピンク系のグラデーション */
+            -webkit-background-clip: text;
+            /* 背景を文字の形に切り抜く（Safari/Chrome用） */
+            background-clip: text;
+            /* 背景を文字の形に切り抜く */
+            color: transparent;
+            /* 本来の文字色を透明にして背景を見せる */
+
+            display: inline-block;
+            /* グラデーションを正しく適用させるために必要 */
+        }
+
+        #saveStatus {
+            font-size: 0.6rem;
+            color: var(--success);
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
         .controls {
             display: flex;
-            gap: 12px;
+            gap: 8px;
             align-items: center;
         }
 
         .bpm-input {
-            width: 55px;
+            width: 50px;
             background: var(--bg);
             border: 1px solid var(--border);
             color: white;
-            border-radius: 8px;
+            border-radius: 6px;
             text-align: center;
             font-weight: bold;
-            height: 38px;
+            height: 35px;
         }
 
         .btn {
-            height: 40px;
-            padding: 0 15px;
+            height: 36px;
+            padding: 0 12px;
             border-radius: 8px;
             border: none;
             font-weight: bold;
@@ -84,126 +108,113 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            transition: 0.2s;
-            user-select: none;
-        }
-
-        .btn:hover {
-            filter: brightness(1.2);
-        }
-
-        .btn:active {
-            transform: scale(0.98);
-        }
-
-        .btn:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
+            gap: 5px;
+            font-size: 0.85rem;
         }
 
         .btn-play {
             background: var(--success);
-            min-width: 90px;
+            min-width: 80px;
         }
 
         .btn-stop {
             background: var(--danger);
-            min-width: 90px;
+            min-width: 80px;
         }
 
-        .btn-icon {
+        .btn-sub {
             background: var(--surface-h);
-            width: 40px;
-            padding: 0;
-            font-size: 1.1rem;
+            border: 1px solid var(--border);
         }
 
-        /* Layout */
+        /* Workspace */
         .workspace {
             display: flex;
             flex: 1;
             overflow: hidden;
+            position: relative;
         }
 
+        /* Sidebar (Desktop) */
         .sidebar {
-            width: 180px;
+            width: 160px;
             background: var(--surface);
             border-right: 1px solid var(--border);
-            padding: 20px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            overflow-y: auto;
+            gap: 10px;
+            z-index: 10;
         }
 
         .side-label {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: var(--muted);
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 4px;
         }
 
-        /* 改善点：クリック可能であることを明示し、タップエリアを確保 */
         .palette-item {
-            padding: 12px;
-            border-radius: 10px;
+            padding: 10px;
+            border-radius: 8px;
             text-align: center;
             font-weight: bold;
             background: var(--surface-h);
-            border-left: 5px solid #ccc;
+            border-left: 4px solid #ccc;
             cursor: pointer;
-            user-select: none;
-            font-size: 0.85rem;
-            transition: transform 0.1s;
+            font-size: 0.8rem;
         }
 
-        .palette-item:active {
-            transform: scale(0.95);
-            background: #475569;
-        }
-
+        /* Timeline */
         .timeline {
             flex: 1;
-            padding: 25px;
+            padding: 20px;
             overflow-y: auto;
             scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
         }
 
         .section-card {
             background: var(--surface);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 30px;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 25px;
             border: 1px solid var(--border);
-            border-left: 8px solid #ccc;
-            position: relative;
+            border-left: 6px solid #ccc;
         }
 
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            user-select: none;
+            margin-bottom: 12px;
             flex-wrap: wrap;
             gap: 10px;
         }
 
-        .section-title-area {
+        .sec-title {
+            font-weight: 800;
+            font-size: 0.9rem;
             display: flex;
             align-items: center;
-            gap: 10px;
-            cursor: move;
-            min-width: 100px;
+            gap: 5px;
         }
 
-        /* Section Controls */
         .sec-ctrl {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
+        }
+
+        .repeat-input {
+            width: 40px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--accent);
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.8rem;
+            height: 28px;
         }
 
         .beat-select {
@@ -211,82 +222,62 @@
             color: var(--text);
             border: 1px solid var(--border);
             border-radius: 4px;
-            padding: 4px 6px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            font-weight: bold;
+            height: 28px;
+            font-size: 0.75rem;
         }
 
-        .repeat-input {
-            width: 45px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--accent);
-            border-radius: 4px;
-            padding: 4px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            text-align: center;
-            margin-right: 5px;
-        }
-
+        /* Grid */
         .measure-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
         }
 
         .measure {
             background: var(--bg);
-            border-radius: 12px;
-            padding: 12px;
+            border-radius: 10px;
+            padding: 10px;
             border: 1px solid var(--border);
             position: relative;
-            transition: border-color 0.2s;
         }
 
         .measure.active {
             border-color: var(--primary);
-            box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
         }
 
         .beats-row {
             display: grid;
-            gap: 6px;
-            margin-top: 10px;
+            gap: 5px;
+            margin-top: 8px;
         }
 
         .beat-slot {
-            height: 50px;
+            height: 45px;
             background: var(--surface-h);
-            border-radius: 8px;
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 800;
-            font-size: 1.1rem;
+            font-weight: bold;
+            font-size: 1rem;
             cursor: pointer;
-            user-select: none;
             border: 1px solid transparent;
-        }
-
-        .beat-slot:hover {
-            border-color: var(--muted);
         }
 
         .beat-slot.current {
             background: var(--primary);
             color: white;
             transform: scale(1.05);
-            z-index: 10;
-            box-shadow: 0 0 20px var(--primary);
+            box-shadow: 0 0 15px var(--primary);
+            z-index: 5;
         }
 
         .beat-slot.empty {
             color: #334155;
         }
 
-        /* Modals */
+        /* Picker Modal */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -294,9 +285,9 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(4px);
+            background: rgba(0, 0, 0, 0.8);
             z-index: 200;
+            backdrop-filter: blur(3px);
         }
 
         .modal {
@@ -305,63 +296,49 @@
             left: 50%;
             transform: translate(-50%, -50%);
             background: var(--surface);
-            width: 95%;
-            max-width: 420px;
-            border-radius: 20px;
-            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 16px;
+            padding: 20px;
             border: 1px solid var(--border);
             display: none;
             z-index: 201;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
         }
 
         .picker-grid {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
-            gap: 8px;
-            margin-bottom: 15px;
+            gap: 6px;
+            margin-bottom: 12px;
         }
 
         .pick-btn {
-            height: 45px;
+            height: 40px;
             background: var(--surface-h);
-            border-radius: 8px;
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
             cursor: pointer;
-            user-select: none;
-            border: 1px solid transparent;
+            font-size: 0.9rem;
         }
 
-        .pick-btn:hover {
-            border-color: var(--primary);
-        }
-
-        .pick-btn.selected {
+        .pick-btn:active {
             background: var(--primary);
         }
 
         @media (max-width: 768px) {
             .sidebar {
-                display: none;
-            }
-
-            /* iPad縦などはモーダル等の別UIが必要だが、今回はPCレイアウト維持か、簡易非表示 */
-            /* 今回は下部固定メニューにするなど本来は必要ですが、簡易的に「上部メニュー」等で対応 */
-            .sidebar {
-                display: flex;
                 position: fixed;
                 bottom: 0;
                 left: 0;
                 width: 100%;
-                height: 80px;
+                height: 70px;
                 flex-direction: row;
                 border-right: none;
                 border-top: 1px solid var(--border);
-                padding: 10px;
-                z-index: 90;
+                padding: 8px;
                 overflow-x: auto;
             }
 
@@ -370,35 +347,30 @@
             }
 
             .palette-item {
-                min-width: 80px;
+                min-width: 70px;
                 font-size: 0.7rem;
-                padding: 8px;
+                padding: 5px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
 
             .timeline {
-                padding-bottom: 100px;
+                padding-bottom: 80px;
             }
 
-            /* Footer space */
             .modal {
                 top: auto;
-                bottom: 0;
-                left: 0;
-                transform: translateY(100%);
-                width: 100%;
-                max-width: none;
-                border-radius: 20px 20px 0 0;
-                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                bottom: 10px;
+                transform: translate(-50%, 0);
+                width: 96%;
             }
 
-            .modal.show {
-                transform: translateY(0);
-                display: block;
+            .btn-sub span {
+                display: none;
             }
 
-            .measure-grid {
-                grid-template-columns: 1fr;
-            }
+            /* Hide text on small buttons */
         }
     </style>
 </head>
@@ -406,270 +378,239 @@
 <body>
 
     <header>
-        <div class="logo">ChordFlow LOOP</div>
+        <div class="logo-group">
+            <div class="logo">🎸ChordFlow Studio</div>
+            <div id="saveStatus">✓ Auto-saved</div>
+        </div>
         <div class="controls">
             <div
-                style="display:flex; align-items:center; background:var(--surface-h); padding:0 10px; border-radius:8px; gap:8px;">
-                <span style="font-size:0.7rem; color:var(--muted)">BPM</span>
+                style="display:flex; align-items:center; background:var(--surface-h); padding:0 8px; border-radius:6px; height:35px;">
+                <span style="font-size:0.6rem; color:var(--muted); margin-right:5px;">BPM</span>
                 <input type="number" id="bpm" class="bpm-input" value="120">
             </div>
-            <button class="btn btn-icon" onclick="openLib()" title="Library">📂</button>
-            <button class="btn btn-icon" onclick="saveSong()" title="Save">💾</button>
-            <button class="btn btn-play" id="playBtn" onclick="togglePlay()">▶ PLAY</button>
+            <input type="file" id="fileInput" accept=".json" style="display:none">
+            <button class="btn btn-sub" onclick="document.getElementById('fileInput').click()">📂
+                <span>Import</span></button>
+            <button class="btn btn-sub" onclick="exportFile()">💾 <span>Export</span></button>
+            <button class="btn btn-play" id="playBtn">▶ PLAY</button>
         </div>
     </header>
 
     <div class="workspace">
-        <div class="sidebar">
-            <div class="palette-item" draggable="true" onclick="addSec('Intro')" data-type="Intro"
-                ondragstart="evDragStart(event)" style="border-color:#3b82f6">Intro</div>
-            <div class="palette-item" draggable="true" onclick="addSec('Verse')" data-type="Verse"
-                ondragstart="evDragStart(event)" style="border-color:#10b981">Verse</div>
-            <div class="palette-item" draggable="true" onclick="addSec('Chorus')" data-type="Chorus"
-                ondragstart="evDragStart(event)" style="border-color:#f43f5e">Chorus</div>
-            <div class="palette-item" draggable="true" onclick="addSec('Solo')" data-type="Solo"
-                ondragstart="evDragStart(event)" style="border-color:#f59e0b">Solo</div>
-
-            <button class="btn" id="pasteBtn" onclick="pasteSec()"
-                style="background:var(--surface-h); min-width:80px; border:1px solid var(--border);" disabled>📋
+        <div class="sidebar" id="sidebar">
+            <div class="side-label">Add Section</div>
+            <div class="palette-item" onclick="addSec('Intro')" style="border-color:#3b82f6">Intro</div>
+            <div class="palette-item" onclick="addSec('Verse')" style="border-color:#10b981">Verse</div>
+            <div class="palette-item" onclick="addSec('Chorus')" style="border-color:#f43f5e">Chorus</div>
+            <div class="palette-item" onclick="addSec('Solo')" style="border-color:#f59e0b">Solo</div>
+            <button class="btn btn-sub" id="pasteBtn" onclick="pasteSec()" disabled style="font-size:0.7rem;">📋
                 Paste</button>
-            <button class="btn" onclick="addCustom()"
-                style="background:none; border:1px dashed #444; color:var(--muted); min-width:80px;">+ Custom</button>
+            <button class="btn" onclick="resetAll()" style="background:#ef4444; font-size:0.6rem; margin-top:auto;">✕
+                RESET</button>
         </div>
 
-        <div class="timeline" id="timeline" ondragover="event.preventDefault()" ondrop="evDrop(event)">
+        <div class="timeline" id="timeline">
             <div id="content"></div>
             <div id="hint"
-                style="text-align:center; padding:60px; color:var(--muted); border:2px dashed var(--border); border-radius:20px; margin-top:20px; user-select:none;">
-                サイドバーの項目をタップ、またはドラッグして追加
+                style="text-align:center; padding:50px; color:var(--muted); border:2px dashed var(--border); border-radius:15px; margin-top:10px;">
+                サイドバーの項目をタップしてセクションを追加
             </div>
         </div>
     </div>
 
-    <div class="modal-overlay" id="overlay" onclick="closePicker()"></div>
+    <div class="modal-overlay" id="overlay"></div>
     <div class="modal" id="picker">
         <div id="preview"
-            style="text-align:center; font-size:2.8rem; font-weight:900; color:var(--primary); margin-bottom:20px; height:60px;">
+            style="text-align:center; font-size:2.5rem; font-weight:900; color:var(--primary); margin-bottom:15px; height:50px;">
             C</div>
         <div class="picker-grid" id="rootGrid"></div>
         <div class="picker-grid" id="suffixGrid" style="grid-template-columns: repeat(4, 1fr);"></div>
         <input type="text" id="customInput" placeholder="Custom (e.g. F#m7-5)"
-            style="width:100%; height:45px; background:var(--bg); border:1px solid var(--border); color:white; border-radius:8px; padding:0 15px; margin-bottom:20px; font-size:1rem;">
+            style="width:100%; height:40px; background:var(--bg); border:1px solid var(--border); color:white; border-radius:8px; padding:0 10px; margin-bottom:15px;">
         <div style="display:flex; gap:10px;">
             <button class="btn" style="flex:1; background:var(--surface-h)" onclick="applyChord('')">Clear</button>
             <button class="btn" style="flex:1; background:var(--primary)" onclick="applyChord()">Apply</button>
         </div>
     </div>
 
-    <div class="modal" id="libModal" style="display:none; max-height:80%; overflow-y:auto;">
-        <h3 style="margin-top:0">My Library</h3>
-        <div id="songList" style="border:1px solid var(--border); border-radius:10px; overflow:hidden;"></div>
-        <button class="btn" style="width:100%; margin-top:20px; background:var(--surface-h)"
-            onclick="closePicker()">Close</button>
-    </div>
-
     <script>
+        // --- Global State ---
         let songData = [];
-        let isPlaying = false, playTimer = null;
-        // s:section, m:measure, b:beat, r:repeat count(現在何周目か)
+        let isPlaying = false;
+        let playTimer = null;
         let playState = { s: 0, m: 0, b: -1, r: 1 };
         let editing = { s: 0, m: 0, b: 0, root: 'C', suf: '' };
         let clipboard = null;
 
+        const AUTOSAVE_KEY = 'chordflow_save_v8';
         const ROOTS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
         const SUFFIXES = ['', 'm', '7', 'm7', 'maj7', 'sus4', 'dim', 'aug', '6', '9', 'add9', 'm7-5'];
         const COLORS = { 'Intro': '#3b82f6', 'Verse': '#10b981', 'Chorus': '#f43f5e', 'Solo': '#f59e0b' };
 
-        function init() {
-            buildPicker();
-            render();
-        }
+        // --- initialization ---
+        window.addEventListener('DOMContentLoaded', () => {
+            buildPickerUI();
+            loadFromStorage();
 
+            // Event Listeners
+            document.getElementById('playBtn').onclick = togglePlay;
+            document.getElementById('overlay').onclick = closePicker;
+            document.getElementById('bpm').onchange = autoSave;
+            document.getElementById('fileInput').onchange = (e) => importFile(e);
+
+            render();
+        });
+
+        // --- Core Logic ---
         function render() {
             const cont = document.getElementById('content');
             const hint = document.getElementById('hint');
             cont.innerHTML = '';
-            hint.style.display = songData.length ? 'none' : 'block';
 
-            songData.forEach((sec, sIdx) => {
-                const color = COLORS[sec.type] || '#8b5cf6';
-                const card = document.createElement('div');
-                card.className = 'section-card';
-                card.style.borderLeftColor = color;
-                card.draggable = true;
-                card.ondragstart = (e) => { e.dataTransfer.setData('moveIdx', sIdx); card.style.opacity = '0.4'; };
-                card.ondragend = () => card.style.opacity = '1';
-
-                // repeat値がない古いデータ用のフォールバック
-                if (!sec.repeat) sec.repeat = 1;
-
-                card.innerHTML = `
-                <div class="section-header">
-                    <div class="section-title-area">
-                        <span style="color:var(--muted); font-size:1.2rem;">⠿</span>
-                        <span style="font-weight:900; color:${color}">${sec.type}</span>
-                    </div>
-                    <div class="sec-ctrl">
-                        <span style="font-size:0.8rem; color:var(--muted); margin-right:2px;">Loop:</span>
-                        <input type="number" min="1" max="99" value="${sec.repeat}" class="repeat-input" onchange="changeRepeat(${sIdx}, this.value)">
-                        
-                        <select class="beat-select" onchange="changeSecBeats(${sIdx}, this.value)">
-                            <option value="2" ${sec.beats == 2 ? 'selected' : ''}>2/4</option>
-                            <option value="3" ${sec.beats == 3 ? 'selected' : ''}>3/4</option>
-                            <option value="4" ${sec.beats == 4 ? 'selected' : ''}>4/4</option>
-                            <option value="6" ${sec.beats == 6 ? 'selected' : ''}>6/8</option>
-                            <option value="8" ${sec.beats == 8 ? 'selected' : ''}>8/8</option>
-                        </select>
-                        <button onclick="copySec(${sIdx})" class="btn btn-icon" style="width:28px; height:28px; font-size:0.75rem;" title="Copy">📋</button>
-                        <button onclick="moveSec(${sIdx},-1)" class="btn btn-icon" style="width:28px; height:28px; font-size:0.7rem;">↑</button>
-                        <button onclick="moveSec(${sIdx},1)" class="btn btn-icon" style="width:28px; height:28px; font-size:0.7rem;">↓</button>
-                        <button onclick="remSec(${sIdx})" class="btn btn-icon" style="width:28px; height:28px; font-size:0.7rem; background:none;">✕</button>
-                    </div>
-                </div>
-                <div class="measure-grid"></div>
-            `;
-                const grid = card.querySelector('.measure-grid');
-                sec.measures.forEach((m, mIdx) => {
-                    const mDiv = document.createElement('div');
-                    mDiv.className = 'measure'; mDiv.id = `m-${sIdx}-${mIdx}`;
-                    mDiv.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; font-size:0.6rem; color:var(--muted); margin-bottom:5px; font-weight:bold;">
-                        <span>MEASURE ${mIdx + 1}</span>
-                        <span onclick="remMeas(${sIdx},${mIdx})" style="cursor:pointer;">✕ REMOVE</span>
-                    </div>
-                    <div class="beats-row" style="grid-template-columns: repeat(${sec.beats > 4 ? sec.beats / 2 : sec.beats}, 1fr)"></div>
-                `;
-                    if (sec.beats > 4) {
-                        mDiv.querySelector('.beats-row').style.gridTemplateColumns = `repeat(4, 1fr)`;
-                    }
-
-                    const brow = mDiv.querySelector('.beats-row');
-                    m.forEach((chord, bIdx) => {
-                        const slot = document.createElement('div');
-                        slot.className = `beat-slot ${chord ? '' : 'empty'}`;
-                        slot.id = `b-${sIdx}-${mIdx}-${bIdx}`;
-                        slot.innerText = chord || '•';
-                        slot.onclick = () => openPicker(sIdx, mIdx, bIdx);
-                        brow.appendChild(slot);
-                    });
-                    grid.appendChild(mDiv);
+            if (songData.length === 0) {
+                hint.style.display = 'block';
+            } else {
+                hint.style.display = 'none';
+                songData.forEach((sec, sIdx) => {
+                    cont.appendChild(createSectionDOM(sec, sIdx));
                 });
-                const addM = document.createElement('div');
-                addM.className = 'beat-slot'; addM.style.height = '90px'; addM.style.border = '2px dashed #2d3748'; addM.innerText = '＋';
-                addM.onclick = () => { songData[sIdx].measures.push(new Array(sec.beats).fill('')); render(); };
-                grid.appendChild(addM);
-                cont.appendChild(card);
-            });
+            }
+
             document.getElementById('pasteBtn').disabled = !clipboard;
+            autoSave();
         }
 
-        // --- Section Management ---
-        // タップ・クリックでの追加用関数
+        function createSectionDOM(sec, sIdx) {
+            const color = COLORS[sec.type] || '#8b5cf6';
+            const card = document.createElement('div');
+            card.className = 'section-card';
+            card.style.borderLeftColor = color;
+
+            // Header
+            const header = document.createElement('div');
+            header.className = 'section-header';
+            header.innerHTML = `
+            <div class="sec-title"><span style="color:#444">⠿</span> <span style="color:${color}">${sec.type}</span></div>
+            <div class="sec-ctrl">
+                <span style="font-size:0.7rem; color:var(--muted)">Loop:</span>
+                <input type="number" class="repeat-input" value="${sec.repeat || 1}" min="1" onchange="updateRepeat(${sIdx}, this.value)">
+                <select class="beat-select" onchange="updateBeats(${sIdx}, this.value)">
+                    <option value="2" ${sec.beats == 2 ? 'selected' : ''}>2/4</option>
+                    <option value="3" ${sec.beats == 3 ? 'selected' : ''}>3/4</option>
+                    <option value="4" ${sec.beats == 4 ? 'selected' : ''}>4/4</option>
+                    <option value="6" ${sec.beats == 6 ? 'selected' : ''}>6/8</option>
+                    <option value="8" ${sec.beats == 8 ? 'selected' : ''}>8/8</option>
+                </select>
+                <button class="btn btn-sub" style="width:28px; height:28px; padding:0" onclick="copySec(${sIdx})">📋</button>
+                <button class="btn btn-sub" style="width:28px; height:28px; padding:0" onclick="removeSec(${sIdx})">✕</button>
+            </div>
+        `;
+            card.appendChild(header);
+
+            // Grid
+            const grid = document.createElement('div');
+            grid.className = 'measure-grid';
+
+            sec.measures.forEach((m, mIdx) => {
+                const mDiv = document.createElement('div');
+                mDiv.className = 'measure';
+                mDiv.id = `m-${sIdx}-${mIdx}`;
+
+                // Measure Label & Remove
+                const mHead = document.createElement('div');
+                mHead.style = "display:flex; justify-content:space-between; font-size:0.55rem; color:var(--muted); font-weight:bold;";
+                mHead.innerHTML = `<span>MEASURE ${mIdx + 1}</span><span style="cursor:pointer" onclick="removeMeasure(${sIdx},${mIdx})">✕</span>`;
+                mDiv.appendChild(mHead);
+
+                // Beats
+                const bRow = document.createElement('div');
+                bRow.className = 'beats-row';
+                // 6 or 8 beats logic for grid columns
+                const cols = sec.beats > 4 ? 4 : sec.beats;
+                bRow.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+                m.forEach((chord, bIdx) => {
+                    const slot = document.createElement('div');
+                    slot.className = `beat-slot ${chord ? '' : 'empty'}`;
+                    slot.id = `b-${sIdx}-${mIdx}-${bIdx}`;
+                    slot.innerText = chord || '•';
+                    slot.onclick = () => openPicker(sIdx, mIdx, bIdx);
+                    bRow.appendChild(slot);
+                });
+                mDiv.appendChild(bRow);
+                grid.appendChild(mDiv);
+            });
+
+            // Add Measure Button
+            const addM = document.createElement('div');
+            addM.className = 'beat-slot';
+            addM.style = "border:1px dashed var(--border); height:80px; color:var(--muted)";
+            addM.innerText = "+ Add Measure";
+            addM.onclick = () => addMeasure(sIdx);
+            grid.appendChild(addM);
+
+            card.appendChild(grid);
+            return card;
+        }
+
+        // --- Actions ---
         function addSec(type) {
             songData.push({ type: type, beats: 4, repeat: 1, measures: [['', '', '', '']] });
             render();
-            // 自動で一番下へスクロール
-            setTimeout(() => {
-                const el = document.getElementById('timeline');
-                el.scrollTop = el.scrollHeight;
-            }, 100);
+            const t = document.getElementById('timeline');
+            setTimeout(() => t.scrollTop = t.scrollHeight, 50);
         }
+        function removeSec(i) { if (confirm("Delete section?")) { songData.splice(i, 1); render(); } }
+        function copySec(i) { clipboard = JSON.parse(JSON.stringify(songData[i])); render(); }
+        function pasteSec() { if (clipboard) { songData.push(JSON.parse(JSON.stringify(clipboard))); render(); } }
 
-        function changeRepeat(sIdx, val) {
-            let v = parseInt(val);
-            if (v < 1) v = 1;
-            songData[sIdx].repeat = v;
-            // 再レンダリングしないとinputの値が戻ってしまうことがあるため(簡易)
-            // ここではあえてrenderせずデータだけ更新
+        function addMeasure(sIdx) {
+            const b = songData[sIdx].beats;
+            songData[sIdx].measures.push(new Array(b).fill(''));
+            render();
         }
+        function removeMeasure(s, m) { songData[s].measures.splice(m, 1); render(); }
 
-        function changeSecBeats(sIdx, val) {
-            const newBeats = parseInt(val);
-            songData[sIdx].beats = newBeats;
-            songData[sIdx].measures = songData[sIdx].measures.map(m => {
-                let newM = new Array(newBeats).fill('');
-                for (let i = 0; i < Math.min(m.length, newBeats); i++) newM[i] = m[i];
-                return newM;
+        function updateRepeat(s, val) { songData[s].repeat = parseInt(val) || 1; autoSave(); }
+        function updateBeats(s, val) {
+            const nb = parseInt(val);
+            songData[s].beats = nb;
+            songData[s].measures = songData[s].measures.map(m => {
+                let nm = new Array(nb).fill('');
+                for (let i = 0; i < Math.min(m.length, nb); i++) nm[i] = m[i];
+                return nm;
             });
             render();
         }
 
-        function copySec(idx) {
-            clipboard = JSON.parse(JSON.stringify(songData[idx]));
-            render();
-        }
-
-        function pasteSec() {
-            if (!clipboard) return;
-            const newSec = JSON.parse(JSON.stringify(clipboard));
-            songData.push(newSec);
-            render();
-        }
-
-        function evDragStart(e) { e.dataTransfer.setData('addType', e.target.dataset.type); }
-        function evDrop(e) {
-            e.preventDefault();
-            const addType = e.dataTransfer.getData('addType');
-            const moveIdx = e.dataTransfer.getData('moveIdx');
-            if (addType) {
-                // Drag Dropでの追加
-                songData.push({ type: addType, beats: 4, repeat: 1, measures: [['', '', '', '']] });
-            }
-            else if (moveIdx !== "") {
-                const target = e.target.closest('.section-card');
-                if (target) {
-                    const targetIdx = Array.from(target.parentNode.children).indexOf(target);
-                    const item = songData.splice(moveIdx, 1)[0];
-                    songData.splice(targetIdx, 0, item);
-                }
-            }
-            render();
-        }
-
-        function moveSec(idx, dir) {
-            const t = idx + dir;
-            if (t >= 0 && t < songData.length) { [songData[idx], songData[t]] = [songData[t], songData[idx]]; render(); }
-        }
-        function addCustom() { const n = prompt("Section Name?"); if (n) addSec(n); }
-        function remSec(i) { if (confirm("Delete this section?")) { songData.splice(i, 1); render(); } }
-        function remMeas(s, m) { songData[s].measures.splice(m, 1); render(); }
-
-        // --- Picker UI ---
-        function buildPicker() {
+        // --- Picker ---
+        function buildPickerUI() {
             const rg = document.getElementById('rootGrid');
             ROOTS.forEach(r => {
-                const b = document.createElement('div'); b.className = 'pick-btn'; b.innerText = r;
-                b.onclick = () => { editing.root = r; updatePrv(); }; rg.appendChild(b);
+                const d = document.createElement('div'); d.className = 'pick-btn'; d.innerText = r;
+                d.onclick = () => { editing.root = r; updatePreview(); }; rg.appendChild(d);
             });
             const sg = document.getElementById('suffixGrid');
             SUFFIXES.forEach(s => {
-                const b = document.createElement('div'); b.className = 'pick-btn'; b.innerText = s || 'M';
-                b.onclick = () => { editing.suf = s; updatePrv(); }; sg.appendChild(b);
+                const d = document.createElement('div'); d.className = 'pick-btn'; d.innerText = s || 'M';
+                d.onclick = () => { editing.suf = s; updatePreview(); }; sg.appendChild(d);
             });
-            document.getElementById('customInput').oninput = updatePrv;
+            document.getElementById('customInput').oninput = updatePreview;
         }
-
         function openPicker(s, m, b) {
             editing = { s, m, b, root: 'C', suf: '' };
             document.getElementById('customInput').value = songData[s].measures[m][b];
-            updatePrv();
+            updatePreview();
             document.getElementById('overlay').style.display = 'block';
-            const p = document.getElementById('picker');
-            p.style.display = 'block';
-            setTimeout(() => p.classList.add('show'), 10);
+            document.getElementById('picker').style.display = 'block';
         }
-
         function closePicker() {
             document.getElementById('overlay').style.display = 'none';
-            const p = document.getElementById('picker');
-            p.classList.remove('show'); p.style.display = 'none';
-            document.getElementById('libModal').style.display = 'none';
+            document.getElementById('picker').style.display = 'none';
         }
-
-        function updatePrv() {
+        function updatePreview() {
             document.getElementById('preview').innerText = document.getElementById('customInput').value || (editing.root + editing.suf);
         }
-
         function applyChord(val) {
             const final = (val === '') ? '' : (document.getElementById('customInput').value || (editing.root + editing.suf));
             songData[editing.s].measures[editing.m][editing.b] = final;
@@ -677,103 +618,88 @@
             closePicker();
         }
 
-        // --- Audio Engine (Loop & Precision) ---
+        // --- Audio Engine ---
         function togglePlay() { isPlaying ? stop() : play(); }
         function play() {
-            if (!songData.length) return;
-            isPlaying = true; document.getElementById('playBtn').innerText = '■ STOP'; document.getElementById('playBtn').className = 'btn btn-stop';
-            // 再生開始時: Section=0, Measure=0, Beat=-1, Repeat=1
+            if (songData.length === 0) return;
+            isPlaying = true;
+            const btn = document.getElementById('playBtn');
+            btn.innerText = '■ STOP'; btn.className = 'btn btn-stop';
             playState = { s: 0, m: 0, b: -1, r: 1 };
             playLoop();
         }
         function stop() {
             isPlaying = false; clearTimeout(playTimer);
-            document.getElementById('playBtn').innerText = '▶ PLAY'; document.getElementById('playBtn').className = 'btn btn-play';
+            const btn = document.getElementById('playBtn');
+            btn.innerText = '▶ PLAY'; btn.className = 'btn btn-play';
             document.querySelectorAll('.current, .active').forEach(e => e.classList.remove('current', 'active'));
         }
         function playLoop() {
             if (!isPlaying) return;
-            const currentSec = songData[playState.s];
-            if (!currentSec) { stop(); return; }
+            const curSec = songData[playState.s];
+            if (!curSec) { stop(); return; }
 
             playState.b++;
-            // 拍が進みきったら次の小節へ
-            if (playState.b >= currentSec.beats) {
-                playState.b = 0;
-                playState.m++;
+            if (playState.b >= curSec.beats) { playState.b = 0; playState.m++; }
+            if (playState.m >= curSec.measures.length) {
+                if (playState.r < (curSec.repeat || 1)) { playState.m = 0; playState.r++; }
+                else { playState.m = 0; playState.s++; playState.r = 1; }
             }
 
-            // 小節が進みきったら...
-            if (playState.m >= currentSec.measures.length) {
-                // まだリピート回数が残っているか確認
-                const maxRepeat = currentSec.repeat || 1;
-                if (playState.r < maxRepeat) {
-                    // リピート続行：小節を最初に戻し、周回カウントを増やす
-                    playState.m = 0;
-                    playState.r++;
-                } else {
-                    // 次のセクションへ
-                    playState.m = 0;
-                    playState.s++;
-                    playState.r = 1; // 次のセクションのために周回カウントリセット
-                }
-            }
-
-            // セクション移動後にデータがあるか再チェック
             if (!songData[playState.s]) { stop(); return; }
 
-            // --- UI更新 ---
+            // UI
             document.querySelectorAll('.current').forEach(e => e.classList.remove('current'));
-
-            // 小節の頭のタイミングでアクティブ表示更新
             if (playState.b === 0) {
                 document.querySelectorAll('.active').forEach(e => e.classList.remove('active'));
                 const m = document.getElementById(`m-${playState.s}-${playState.m}`);
-                if (m) {
-                    m.classList.add('active');
-                    m.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
+                if (m) { m.classList.add('active'); m.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
             }
             const b = document.getElementById(`b-${playState.s}-${playState.m}-${playState.b}`);
             if (b) b.classList.add('current');
 
-            // --- タイミング計算 ---
-            let interval = (60 / document.getElementById('bpm').value) * 1000;
-            if (songData[playState.s].beats === 6 || songData[playState.s].beats === 8) {
-                interval = interval * 0.5; // 8分音符カウントの場合は倍速
-            }
-
+            // Timing
+            let interval = (60 / (document.getElementById('bpm').value || 120)) * 1000;
+            if (songData[playState.s].beats === 6 || songData[playState.s].beats === 8) interval *= 0.5;
             playTimer = setTimeout(playLoop, interval);
         }
 
-        // --- Data Storage ---
-        const KEY = 'chordFlow_loop_v7';
-        function saveSong() {
-            const n = prompt("Song Title?"); if (!n) return;
-            const lib = JSON.parse(localStorage.getItem(KEY) || '{}');
-            lib[n] = { bpm: document.getElementById('bpm').value, data: songData };
-            localStorage.setItem(KEY, JSON.stringify(lib)); alert("Saved!");
+        // --- Storage & Files ---
+        function autoSave() {
+            const state = { bpm: document.getElementById('bpm').value, data: songData };
+            localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
+            const s = document.getElementById('saveStatus');
+            s.style.opacity = 1; setTimeout(() => s.style.opacity = 0, 1500);
         }
-        function openLib() {
-            const lib = JSON.parse(localStorage.getItem(KEY) || '{}');
-            const list = document.getElementById('songList'); list.innerHTML = '';
-            Object.keys(lib).forEach(n => {
-                const item = document.createElement('div');
-                item.style = "display:flex; justify-content:space-between; padding:15px; border-bottom:1px solid #333; cursor:pointer; background:var(--surface);";
-                item.innerHTML = `<span style="flex:1; font-weight:bold;" onclick="loadSong('${n}')">${n}</span><span onclick="delSong('${n}')">🗑</span>`;
-                list.appendChild(item);
-            });
-            document.getElementById('overlay').style.display = 'block';
-            document.getElementById('libModal').style.display = 'block';
+        function loadFromStorage() {
+            const saved = localStorage.getItem(AUTOSAVE_KEY);
+            if (saved) {
+                try {
+                    const p = JSON.parse(saved);
+                    songData = p.data || [];
+                    document.getElementById('bpm').value = p.bpm || 120;
+                } catch (e) { console.error("Load failed"); }
+            }
         }
-        function loadSong(n) {
-            const lib = JSON.parse(localStorage.getItem(KEY));
-            songData = lib[n].data; document.getElementById('bpm').value = lib[n].bpm;
-            render(); closePicker();
+        function exportFile() {
+            const blob = new Blob([JSON.stringify({ bpm: document.getElementById('bpm').value, data: songData })], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `my_song_${new Date().getTime()}.json`;
+            a.click();
         }
-        function delSong(n) { if (confirm("Delete?")) { const lib = JSON.parse(localStorage.getItem(KEY)); delete lib[n]; localStorage.setItem(KEY, JSON.stringify(lib)); openLib(); } }
+        function importFile(e) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const p = JSON.parse(ev.target.result);
+                    if (p.data) { songData = p.data; document.getElementById('bpm').value = p.bpm || 120; render(); }
+                } catch (err) { alert("Invalid file"); }
+            };
+            reader.readAsText(e.target.files[0]);
+        }
+        function resetAll() { if (confirm("Reset everything?")) { songData = []; render(); } }
 
-        init();
     </script>
 </body>
 
