@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🎸ChordFlow Studio</title>
+    <title>ChordFlow Studio</title>
     <style>
         :root {
             --bg: #0f172a;
@@ -36,7 +36,7 @@
             overflow: hidden;
         }
 
-        /* Header */
+        /* Header & Logo Gradient */
         header {
             background: var(--surface);
             height: 65px;
@@ -58,19 +58,11 @@
             font-weight: 900;
             font-size: 1.1rem;
             letter-spacing: 0.5px;
-
-            /* ここからグラデーションの設定 */
-            background: linear-gradient(90deg, #11998e, #38ef7d);
-            /* 紫〜ピンク系のグラデーション */
+            background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
             -webkit-background-clip: text;
-            /* 背景を文字の形に切り抜く（Safari/Chrome用） */
             background-clip: text;
-            /* 背景を文字の形に切り抜く */
             color: transparent;
-            /* 本来の文字色を透明にして背景を見せる */
-
             display: inline-block;
-            /* グラデーションを正しく適用させるために必要 */
         }
 
         #saveStatus {
@@ -78,6 +70,7 @@
             color: var(--success);
             opacity: 0;
             transition: opacity 0.3s;
+            margin-top: 2px;
         }
 
         .controls {
@@ -135,7 +128,6 @@
             position: relative;
         }
 
-        /* Sidebar (Desktop) */
         .sidebar {
             width: 160px;
             background: var(--surface);
@@ -181,6 +173,7 @@
             margin-bottom: 25px;
             border: 1px solid var(--border);
             border-left: 6px solid #ccc;
+            position: relative;
         }
 
         .section-header {
@@ -197,7 +190,15 @@
             font-size: 0.9rem;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .sec-title:hover {
+            background: var(--surface-h);
         }
 
         .sec-ctrl {
@@ -277,7 +278,7 @@
             color: #334155;
         }
 
-        /* Picker Modal */
+        /* Modals */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -324,10 +325,6 @@
             font-size: 0.9rem;
         }
 
-        .pick-btn:active {
-            background: var(--primary);
-        }
-
         @media (max-width: 768px) {
             .sidebar {
                 position: fixed;
@@ -365,12 +362,6 @@
                 transform: translate(-50%, 0);
                 width: 96%;
             }
-
-            .btn-sub span {
-                display: none;
-            }
-
-            /* Hide text on small buttons */
         }
     </style>
 </head>
@@ -379,7 +370,7 @@
 
     <header>
         <div class="logo-group">
-            <div class="logo">🎸ChordFlow Studio</div>
+            <div class="logo">ChordFlow Studio</div>
             <div id="saveStatus">✓ Auto-saved</div>
         </div>
         <div class="controls">
@@ -389,9 +380,8 @@
                 <input type="number" id="bpm" class="bpm-input" value="120">
             </div>
             <input type="file" id="fileInput" accept=".json" style="display:none">
-            <button class="btn btn-sub" onclick="document.getElementById('fileInput').click()">📂
-                <span>Import</span></button>
-            <button class="btn btn-sub" onclick="exportFile()">💾 <span>Export</span></button>
+            <button class="btn btn-sub" onclick="document.getElementById('fileInput').click()">📂</button>
+            <button class="btn btn-sub" onclick="exportFile()">💾</button>
             <button class="btn btn-play" id="playBtn">▶ PLAY</button>
         </div>
     </header>
@@ -413,19 +403,19 @@
             <div id="content"></div>
             <div id="hint"
                 style="text-align:center; padding:50px; color:var(--muted); border:2px dashed var(--border); border-radius:15px; margin-top:10px;">
-                サイドバーの項目をタップしてセクションを追加
+                サイドバーをタップして追加。<br>タイトルタップで名前と色を変更。
             </div>
         </div>
     </div>
 
-    <div class="modal-overlay" id="overlay"></div>
-    <div class="modal" id="picker">
-        <div id="preview"
+    <div class="modal-overlay" id="chordOverlay"></div>
+    <div class="modal" id="chordPicker">
+        <div id="chordPreview"
             style="text-align:center; font-size:2.5rem; font-weight:900; color:var(--primary); margin-bottom:15px; height:50px;">
             C</div>
         <div class="picker-grid" id="rootGrid"></div>
         <div class="picker-grid" id="suffixGrid" style="grid-template-columns: repeat(4, 1fr);"></div>
-        <input type="text" id="customInput" placeholder="Custom (e.g. F#m7-5)"
+        <input type="text" id="customInput" placeholder="Custom..."
             style="width:100%; height:40px; background:var(--bg); border:1px solid var(--border); color:white; border-radius:8px; padding:0 10px; margin-bottom:15px;">
         <div style="display:flex; gap:10px;">
             <button class="btn" style="flex:1; background:var(--surface-h)" onclick="applyChord('')">Clear</button>
@@ -433,35 +423,50 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="secOverlay"></div>
+    <div class="modal" id="secEditModal">
+        <h3 style="margin-top:0; font-size:1rem; color:var(--muted)">Edit Section</h3>
+        <div style="margin-bottom:15px;">
+            <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:5px;">Section Name</label>
+            <input type="text" id="secNameInput"
+                style="width:100%; height:40px; background:var(--bg); border:1px solid var(--border); color:white; border-radius:8px; padding:0 10px;">
+        </div>
+        <div style="margin-bottom:20px;">
+            <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:5px;">Color</label>
+            <input type="color" id="secColorInput"
+                style="width:100%; height:45px; background:none; border:1px solid var(--border); padding:2px; border-radius:8px; cursor:pointer;">
+        </div>
+        <div style="display:flex; gap:10px;">
+            <button class="btn" style="flex:1; background:var(--surface-h)" onclick="closeSecModal()">Cancel</button>
+            <button class="btn" style="flex:1; background:var(--primary)" onclick="applySecEdit()">Save Changes</button>
+        </div>
+    </div>
+
     <script>
-        // --- Global State ---
         let songData = [];
         let isPlaying = false;
         let playTimer = null;
         let playState = { s: 0, m: 0, b: -1, r: 1 };
-        let editing = { s: 0, m: 0, b: 0, root: 'C', suf: '' };
+        let editingChord = { s: 0, m: 0, b: 0, root: 'C', suf: '' };
+        let editingSecIdx = null;
         let clipboard = null;
 
-        const AUTOSAVE_KEY = 'chordflow_save_v8';
+        const AUTOSAVE_KEY = 'chordflow_custom_v9';
         const ROOTS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
         const SUFFIXES = ['', 'm', '7', 'm7', 'maj7', 'sus4', 'dim', 'aug', '6', '9', 'add9', 'm7-5'];
-        const COLORS = { 'Intro': '#3b82f6', 'Verse': '#10b981', 'Chorus': '#f43f5e', 'Solo': '#f59e0b' };
+        const DEFAULT_COLORS = { 'Intro': '#3b82f6', 'Verse': '#10b981', 'Chorus': '#f43f5e', 'Solo': '#f59e0b' };
 
-        // --- initialization ---
         window.addEventListener('DOMContentLoaded', () => {
             buildPickerUI();
             loadFromStorage();
-
-            // Event Listeners
             document.getElementById('playBtn').onclick = togglePlay;
-            document.getElementById('overlay').onclick = closePicker;
+            document.getElementById('chordOverlay').onclick = closePicker;
+            document.getElementById('secOverlay').onclick = closeSecModal;
             document.getElementById('bpm').onchange = autoSave;
             document.getElementById('fileInput').onchange = (e) => importFile(e);
-
             render();
         });
 
-        // --- Core Logic ---
         function render() {
             const cont = document.getElementById('content');
             const hint = document.getElementById('hint');
@@ -475,24 +480,26 @@
                     cont.appendChild(createSectionDOM(sec, sIdx));
                 });
             }
-
             document.getElementById('pasteBtn').disabled = !clipboard;
             autoSave();
         }
 
         function createSectionDOM(sec, sIdx) {
-            const color = COLORS[sec.type] || '#8b5cf6';
+            // 後方互換性：colorがない場合はタイプ名からデフォルト色を取得
+            const cardColor = sec.color || DEFAULT_COLORS[sec.type] || '#8b5cf6';
             const card = document.createElement('div');
             card.className = 'section-card';
-            card.style.borderLeftColor = color;
+            card.style.borderLeftColor = cardColor;
 
-            // Header
             const header = document.createElement('div');
             header.className = 'section-header';
             header.innerHTML = `
-            <div class="sec-title"><span style="color:#444">⠿</span> <span style="color:${color}">${sec.type}</span></div>
+            <div class="sec-title" onclick="openSecModal(${sIdx})">
+                <span style="color:${cardColor}">⬤</span> 
+                <span style="color:white">${sec.type}</span>
+                <span style="font-size:0.6rem; color:var(--muted); margin-left:5px;">Edit</span>
+            </div>
             <div class="sec-ctrl">
-                <span style="font-size:0.7rem; color:var(--muted)">Loop:</span>
                 <input type="number" class="repeat-input" value="${sec.repeat || 1}" min="1" onchange="updateRepeat(${sIdx}, this.value)">
                 <select class="beat-select" onchange="updateBeats(${sIdx}, this.value)">
                     <option value="2" ${sec.beats == 2 ? 'selected' : ''}>2/4</option>
@@ -507,25 +514,20 @@
         `;
             card.appendChild(header);
 
-            // Grid
             const grid = document.createElement('div');
             grid.className = 'measure-grid';
-
             sec.measures.forEach((m, mIdx) => {
                 const mDiv = document.createElement('div');
                 mDiv.className = 'measure';
                 mDiv.id = `m-${sIdx}-${mIdx}`;
 
-                // Measure Label & Remove
                 const mHead = document.createElement('div');
                 mHead.style = "display:flex; justify-content:space-between; font-size:0.55rem; color:var(--muted); font-weight:bold;";
                 mHead.innerHTML = `<span>MEASURE ${mIdx + 1}</span><span style="cursor:pointer" onclick="removeMeasure(${sIdx},${mIdx})">✕</span>`;
                 mDiv.appendChild(mHead);
 
-                // Beats
                 const bRow = document.createElement('div');
                 bRow.className = 'beats-row';
-                // 6 or 8 beats logic for grid columns
                 const cols = sec.beats > 4 ? 4 : sec.beats;
                 bRow.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
@@ -541,11 +543,10 @@
                 grid.appendChild(mDiv);
             });
 
-            // Add Measure Button
             const addM = document.createElement('div');
             addM.className = 'beat-slot';
-            addM.style = "border:1px dashed var(--border); height:80px; color:var(--muted)";
-            addM.innerText = "+ Add Measure";
+            addM.style = "border:1px dashed var(--border); height:80px; color:var(--muted); font-size:0.7rem;";
+            addM.innerText = "+ ADD MEASURE";
             addM.onclick = () => addMeasure(sIdx);
             grid.appendChild(addM);
 
@@ -553,9 +554,38 @@
             return card;
         }
 
-        // --- Actions ---
+        // --- Section Editing Functions ---
+        function openSecModal(idx) {
+            editingSecIdx = idx;
+            const sec = songData[idx];
+            document.getElementById('secNameInput').value = sec.type;
+            document.getElementById('secColorInput').value = sec.color || DEFAULT_COLORS[sec.type] || '#8b5cf6';
+            document.getElementById('secOverlay').style.display = 'block';
+            document.getElementById('secEditModal').style.display = 'block';
+        }
+
+        function closeSecModal() {
+            document.getElementById('secOverlay').style.display = 'none';
+            document.getElementById('secEditModal').style.display = 'none';
+            editingSecIdx = null;
+        }
+
+        function applySecEdit() {
+            if (editingSecIdx === null) return;
+            const newName = document.getElementById('secNameInput').value || 'Untitled';
+            const newColor = document.getElementById('secColorInput').value;
+
+            songData[editingSecIdx].type = newName;
+            songData[editingSecIdx].color = newColor;
+
+            render();
+            closeSecModal();
+        }
+
+        // --- Standard Actions ---
         function addSec(type) {
-            songData.push({ type: type, beats: 4, repeat: 1, measures: [['', '', '', '']] });
+            const color = DEFAULT_COLORS[type] || '#8b5cf6';
+            songData.push({ type: type, color: color, beats: 4, repeat: 1, measures: [['', '', '', '']] });
             render();
             const t = document.getElementById('timeline');
             setTimeout(() => t.scrollTop = t.scrollHeight, 50);
@@ -563,14 +593,8 @@
         function removeSec(i) { if (confirm("Delete section?")) { songData.splice(i, 1); render(); } }
         function copySec(i) { clipboard = JSON.parse(JSON.stringify(songData[i])); render(); }
         function pasteSec() { if (clipboard) { songData.push(JSON.parse(JSON.stringify(clipboard))); render(); } }
-
-        function addMeasure(sIdx) {
-            const b = songData[sIdx].beats;
-            songData[sIdx].measures.push(new Array(b).fill(''));
-            render();
-        }
+        function addMeasure(sIdx) { songData[sIdx].measures.push(new Array(songData[sIdx].beats).fill('')); render(); }
         function removeMeasure(s, m) { songData[s].measures.splice(m, 1); render(); }
-
         function updateRepeat(s, val) { songData[s].repeat = parseInt(val) || 1; autoSave(); }
         function updateBeats(s, val) {
             const nb = parseInt(val);
@@ -583,42 +607,42 @@
             render();
         }
 
-        // --- Picker ---
+        // --- Chord Picker ---
         function buildPickerUI() {
             const rg = document.getElementById('rootGrid');
             ROOTS.forEach(r => {
                 const d = document.createElement('div'); d.className = 'pick-btn'; d.innerText = r;
-                d.onclick = () => { editing.root = r; updatePreview(); }; rg.appendChild(d);
+                d.onclick = () => { editingChord.root = r; updateChordPreview(); }; rg.appendChild(d);
             });
             const sg = document.getElementById('suffixGrid');
             SUFFIXES.forEach(s => {
                 const d = document.createElement('div'); d.className = 'pick-btn'; d.innerText = s || 'M';
-                d.onclick = () => { editing.suf = s; updatePreview(); }; sg.appendChild(d);
+                d.onclick = () => { editingChord.suf = s; updateChordPreview(); }; sg.appendChild(d);
             });
-            document.getElementById('customInput').oninput = updatePreview;
+            document.getElementById('customInput').oninput = updateChordPreview;
         }
         function openPicker(s, m, b) {
-            editing = { s, m, b, root: 'C', suf: '' };
+            editingChord = { s, m, b, root: 'C', suf: '' };
             document.getElementById('customInput').value = songData[s].measures[m][b];
-            updatePreview();
-            document.getElementById('overlay').style.display = 'block';
-            document.getElementById('picker').style.display = 'block';
+            updateChordPreview();
+            document.getElementById('chordOverlay').style.display = 'block';
+            document.getElementById('chordPicker').style.display = 'block';
         }
         function closePicker() {
-            document.getElementById('overlay').style.display = 'none';
-            document.getElementById('picker').style.display = 'none';
+            document.getElementById('chordOverlay').style.display = 'none';
+            document.getElementById('chordPicker').style.display = 'none';
         }
-        function updatePreview() {
-            document.getElementById('preview').innerText = document.getElementById('customInput').value || (editing.root + editing.suf);
+        function updateChordPreview() {
+            document.getElementById('chordPreview').innerText = document.getElementById('customInput').value || (editingChord.root + editingChord.suf);
         }
         function applyChord(val) {
-            const final = (val === '') ? '' : (document.getElementById('customInput').value || (editing.root + editing.suf));
-            songData[editing.s].measures[editing.m][editing.b] = final;
+            const final = (val === '') ? '' : (document.getElementById('customInput').value || (editingChord.root + editingChord.suf));
+            songData[editingChord.s].measures[editingChord.m][editingChord.b] = final;
             render();
             closePicker();
         }
 
-        // --- Audio Engine ---
+        // --- Audio ---
         function togglePlay() { isPlaying ? stop() : play(); }
         function play() {
             if (songData.length === 0) return;
@@ -638,17 +662,13 @@
             if (!isPlaying) return;
             const curSec = songData[playState.s];
             if (!curSec) { stop(); return; }
-
             playState.b++;
             if (playState.b >= curSec.beats) { playState.b = 0; playState.m++; }
             if (playState.m >= curSec.measures.length) {
                 if (playState.r < (curSec.repeat || 1)) { playState.m = 0; playState.r++; }
                 else { playState.m = 0; playState.s++; playState.r = 1; }
             }
-
             if (!songData[playState.s]) { stop(); return; }
-
-            // UI
             document.querySelectorAll('.current').forEach(e => e.classList.remove('current'));
             if (playState.b === 0) {
                 document.querySelectorAll('.active').forEach(e => e.classList.remove('active'));
@@ -657,8 +677,6 @@
             }
             const b = document.getElementById(`b-${playState.s}-${playState.m}-${playState.b}`);
             if (b) b.classList.add('current');
-
-            // Timing
             let interval = (60 / (document.getElementById('bpm').value || 120)) * 1000;
             if (songData[playState.s].beats === 6 || songData[playState.s].beats === 8) interval *= 0.5;
             playTimer = setTimeout(playLoop, interval);
@@ -682,10 +700,10 @@
             }
         }
         function exportFile() {
-            const blob = new Blob([JSON.stringify({ bpm: document.getElementById('bpm').value, data: songData })], { type: 'application/json' });
+            const blob = new Blob([JSON.stringify({ bpm: document.getElementById('bpm').value, data: songData }, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `my_song_${new Date().getTime()}.json`;
+            a.download = `song_flow_${new Date().getTime()}.json`;
             a.click();
         }
         function importFile(e) {
@@ -693,13 +711,16 @@
             reader.onload = (ev) => {
                 try {
                     const p = JSON.parse(ev.target.result);
-                    if (p.data) { songData = p.data; document.getElementById('bpm').value = p.bpm || 120; render(); }
+                    if (p.data) {
+                        songData = p.data;
+                        document.getElementById('bpm').value = p.bpm || 120;
+                        render();
+                    }
                 } catch (err) { alert("Invalid file"); }
             };
             reader.readAsText(e.target.files[0]);
         }
         function resetAll() { if (confirm("Reset everything?")) { songData = []; render(); } }
-
     </script>
 </body>
 
