@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ChordFlow Professional</title>
+    <title>ChordFlow Pro Ultra</title>
     <style>
         :root {
             --bg: #0f172a;
@@ -53,6 +53,7 @@
             font-size: 1.2rem;
             color: var(--primary);
             letter-spacing: 1px;
+            user-select: none;
         }
 
         .controls {
@@ -92,6 +93,11 @@
             filter: brightness(1.2);
         }
 
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
         .btn-play {
             background: var(--success);
             min-width: 90px;
@@ -117,13 +123,21 @@
         }
 
         .sidebar {
-            width: 170px;
+            width: 180px;
             background: var(--surface);
             border-right: 1px solid var(--border);
             padding: 20px;
             display: flex;
             flex-direction: column;
             gap: 12px;
+        }
+
+        .side-label {
+            font-size: 0.7rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
         }
 
         .palette-item {
@@ -135,7 +149,7 @@
             border-left: 5px solid #ccc;
             cursor: grab;
             user-select: none;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .timeline {
@@ -174,22 +188,23 @@
         .sec-ctrl {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .beat-select {
             background: var(--bg);
-            color: var(--muted);
+            color: var(--text);
             border: 1px solid var(--border);
             border-radius: 4px;
-            padding: 2px 5px;
+            padding: 4px 6px;
             font-size: 0.8rem;
             cursor: pointer;
+            font-weight: bold;
         }
 
         .measure-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
             gap: 15px;
         }
 
@@ -213,20 +228,21 @@
         }
 
         .beat-slot {
-            height: 55px;
+            height: 50px;
             background: var(--surface-h);
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 800;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             cursor: pointer;
             user-select: none;
+            border: 1px solid transparent;
         }
 
         .beat-slot:hover {
-            background: #404e63;
+            border-color: var(--muted);
         }
 
         .beat-slot.current {
@@ -238,7 +254,7 @@
         }
 
         .beat-slot.empty {
-            color: #444;
+            color: #334155;
         }
 
         /* Modals */
@@ -260,8 +276,8 @@
             left: 50%;
             transform: translate(-50%, -50%);
             background: var(--surface);
-            width: 90%;
-            max-width: 400px;
+            width: 95%;
+            max-width: 420px;
             border-radius: 20px;
             padding: 25px;
             border: 1px solid var(--border);
@@ -318,6 +334,10 @@
                 transform: translateY(0);
                 display: block;
             }
+
+            .measure-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -332,16 +352,15 @@
                 <span style="font-size:0.7rem; color:var(--muted)">BPM</span>
                 <input type="number" id="bpm" class="bpm-input" value="120">
             </div>
-            <button class="btn btn-icon" onclick="openLib()">📂</button>
-            <button class="btn btn-icon" onclick="saveSong()">💾</button>
+            <button class="btn btn-icon" onclick="openLib()" title="Library">📂</button>
+            <button class="btn btn-icon" onclick="saveSong()" title="Save">💾</button>
             <button class="btn btn-play" id="playBtn" onclick="togglePlay()">▶ PLAY</button>
         </div>
     </header>
 
     <div class="workspace">
         <div class="sidebar">
-            <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Templates
-            </div>
+            <div class="side-label">Templates</div>
             <div class="palette-item" draggable="true" data-type="Intro" ondragstart="evDragStart(event)"
                 style="border-color:#3b82f6">Intro</div>
             <div class="palette-item" draggable="true" data-type="Verse" ondragstart="evDragStart(event)"
@@ -350,16 +369,22 @@
                 style="border-color:#f43f5e">Chorus</div>
             <div class="palette-item" draggable="true" data-type="Solo" ondragstart="evDragStart(event)"
                 style="border-color:#f59e0b">Solo</div>
+
+            <div class="side-label" style="margin-top:20px;">Clipboard</div>
+            <button class="btn" id="pasteBtn" onclick="pasteSec()"
+                style="background:var(--surface-h); width:100%; border:1px solid var(--border);" disabled>📋 Paste
+                Sec</button>
+
             <button class="btn" onclick="addCustom()"
-                style="background:none; border:1px dashed #444; color:var(--muted); width:100%; margin-top:10px;">+
+                style="background:none; border:1px dashed #444; color:var(--muted); width:100%; margin-top:auto;">+
                 Custom</button>
         </div>
 
         <div class="timeline" id="timeline" ondragover="event.preventDefault()" ondrop="evDrop(event)">
             <div id="content"></div>
             <div id="hint"
-                style="text-align:center; padding:60px; color:var(--muted); border:2px dashed var(--border); border-radius:20px; margin-top:20px;">
-                サイドバーからセクションをドラッグして開始
+                style="text-align:center; padding:60px; color:var(--muted); border:2px dashed var(--border); border-radius:20px; margin-top:20px; user-select:none;">
+                ドラッグ＆ドロップでセクションを追加
             </div>
         </div>
     </div>
@@ -372,7 +397,7 @@
         <div class="picker-grid" id="rootGrid"></div>
         <div class="picker-grid" id="suffixGrid" style="grid-template-columns: repeat(4, 1fr);"></div>
         <input type="text" id="customInput" placeholder="Custom (e.g. F#m7-5)"
-            style="width:100%; height:45px; background:var(--bg); border:1px solid var(--border); color:white; border-radius:8px; padding:0 15px; margin-bottom:20px;">
+            style="width:100%; height:45px; background:var(--bg); border:1px solid var(--border); color:white; border-radius:8px; padding:0 15px; margin-bottom:20px; font-size:1rem;">
         <div style="display:flex; gap:10px;">
             <button class="btn" style="flex:1; background:var(--surface-h)" onclick="applyChord('')">Clear</button>
             <button class="btn" style="flex:1; background:var(--primary)" onclick="applyChord()">Apply</button>
@@ -381,7 +406,7 @@
 
     <div class="modal" id="libModal" style="display:none; max-height:80%; overflow-y:auto;">
         <h3 style="margin-top:0">My Library</h3>
-        <div id="songList" style="border:1px solid var(--border); border-radius:10px;"></div>
+        <div id="songList" style="border:1px solid var(--border); border-radius:10px; overflow:hidden;"></div>
         <button class="btn" style="width:100%; margin-top:20px; background:var(--surface-h)"
             onclick="closePicker()">Close</button>
     </div>
@@ -391,6 +416,7 @@
         let isPlaying = false, playTimer = null;
         let playState = { s: 0, m: 0, b: -1 };
         let editing = { s: 0, m: 0, b: 0, root: 'C', suf: '' };
+        let clipboard = null;
 
         const ROOTS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
         const SUFFIXES = ['', 'm', '7', 'm7', 'maj7', 'sus4', 'dim', 'aug', '6', '9', 'add9', 'm7-5'];
@@ -428,7 +454,9 @@
                             <option value="3" ${sec.beats == 3 ? 'selected' : ''}>3/4</option>
                             <option value="4" ${sec.beats == 4 ? 'selected' : ''}>4/4</option>
                             <option value="6" ${sec.beats == 6 ? 'selected' : ''}>6/8</option>
+                            <option value="8" ${sec.beats == 8 ? 'selected' : ''}>8/8</option>
                         </select>
+                        <button onclick="copySec(${sIdx})" class="btn btn-icon" style="width:28px; height:28px; font-size:0.75rem;" title="Copy">📋</button>
                         <button onclick="moveSec(${sIdx},-1)" class="btn btn-icon" style="width:28px; height:28px; font-size:0.7rem;">↑</button>
                         <button onclick="moveSec(${sIdx},1)" class="btn btn-icon" style="width:28px; height:28px; font-size:0.7rem;">↓</button>
                         <button onclick="remSec(${sIdx})" class="btn btn-icon" style="width:28px; height:28px; font-size:0.7rem; background:none;">✕</button>
@@ -441,12 +469,17 @@
                     const mDiv = document.createElement('div');
                     mDiv.className = 'measure'; mDiv.id = `m-${sIdx}-${mIdx}`;
                     mDiv.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--muted); margin-bottom:5px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.6rem; color:var(--muted); margin-bottom:5px; font-weight:bold;">
                         <span>MEASURE ${mIdx + 1}</span>
-                        <span onclick="remMeas(${sIdx},${mIdx})" style="cursor:pointer;">✕</span>
+                        <span onclick="remMeas(${sIdx},${mIdx})" style="cursor:pointer;">✕ REMOVE</span>
                     </div>
-                    <div class="beats-row" style="grid-template-columns: repeat(${sec.beats}, 1fr)"></div>
+                    <div class="beats-row" style="grid-template-columns: repeat(${sec.beats > 4 ? sec.beats / 2 : sec.beats}, 1fr)"></div>
                 `;
+                    // 8拍子の時は2段に分かれるようにgrid-templateを調整(任意)
+                    if (sec.beats > 4) {
+                        mDiv.querySelector('.beats-row').style.gridTemplateColumns = `repeat(4, 1fr)`;
+                    }
+
                     const brow = mDiv.querySelector('.beats-row');
                     m.forEach((chord, bIdx) => {
                         const slot = document.createElement('div');
@@ -459,14 +492,17 @@
                     grid.appendChild(mDiv);
                 });
                 const addM = document.createElement('div');
-                addM.className = 'beat-slot'; addM.style.height = '90px'; addM.style.border = '2px dashed #2d3748'; addM.innerText = '＋';
+                addM.className = 'beat-slot'; addM.style.height = '90px'; addM.style.border = '2px dashed #2d3748'; addM.innerText = '＋ ADD MEASURE';
                 addM.onclick = () => { songData[sIdx].measures.push(new Array(sec.beats).fill('')); render(); };
                 grid.appendChild(addM);
                 cont.appendChild(card);
             });
+
+            // クリップボードボタンの活性化
+            document.getElementById('pasteBtn').disabled = !clipboard;
         }
 
-        // Actions
+        // --- Section Management ---
         function changeSecBeats(sIdx, val) {
             const newBeats = parseInt(val);
             songData[sIdx].beats = newBeats;
@@ -475,6 +511,18 @@
                 for (let i = 0; i < Math.min(m.length, newBeats); i++) newM[i] = m[i];
                 return newM;
             });
+            render();
+        }
+
+        function copySec(idx) {
+            clipboard = JSON.parse(JSON.stringify(songData[idx]));
+            render();
+        }
+
+        function pasteSec() {
+            if (!clipboard) return;
+            const newSec = JSON.parse(JSON.stringify(clipboard));
+            songData.push(newSec);
             render();
         }
 
@@ -503,7 +551,7 @@
         function remSec(i) { if (confirm("Delete this section?")) { songData.splice(i, 1); render(); } }
         function remMeas(s, m) { songData[s].measures.splice(m, 1); render(); }
 
-        // Picker Logic
+        // --- Picker UI ---
         function buildPicker() {
             const rg = document.getElementById('rootGrid');
             ROOTS.forEach(r => {
@@ -546,7 +594,7 @@
             closePicker();
         }
 
-        // Playback
+        // --- Audio Engine ---
         function togglePlay() { isPlaying ? stop() : play(); }
         function play() {
             if (!songData.length) return;
@@ -581,8 +629,8 @@
             playTimer = setTimeout(playLoop, (60 / document.getElementById('bpm').value) * 1000);
         }
 
-        // Library
-        const KEY = 'chordFlow_pro_v4';
+        // --- Data Storage ---
+        const KEY = 'chordFlow_ultra_v5';
         function saveSong() {
             const n = prompt("Song Title?"); if (!n) return;
             const lib = JSON.parse(localStorage.getItem(KEY) || '{}');
@@ -594,7 +642,7 @@
             const list = document.getElementById('songList'); list.innerHTML = '';
             Object.keys(lib).forEach(n => {
                 const item = document.createElement('div');
-                item.style = "display:flex; justify-content:space-between; padding:15px; border-bottom:1px solid #333; cursor:pointer;";
+                item.style = "display:flex; justify-content:space-between; padding:15px; border-bottom:1px solid #333; cursor:pointer; background:var(--surface);";
                 item.innerHTML = `<span style="flex:1; font-weight:bold;" onclick="loadSong('${n}')">${n}</span><span onclick="delSong('${n}')">🗑</span>`;
                 list.appendChild(item);
             });
