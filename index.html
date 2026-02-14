@@ -36,7 +36,7 @@
             overflow: hidden;
         }
 
-        /* Header & Logo Gradient */
+        /* Header & Logo */
         header {
             background: var(--surface);
             height: 65px;
@@ -58,7 +58,7 @@
             font-weight: 900;
             font-size: 1.1rem;
             letter-spacing: 0.5px;
-            background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
+            background: linear-gradient(90deg, #f12711, #f5af19);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
@@ -103,6 +103,11 @@
             justify-content: center;
             gap: 5px;
             font-size: 0.85rem;
+            transition: 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
         }
 
         .btn-play {
@@ -118,6 +123,13 @@
         .btn-sub {
             background: var(--surface-h);
             border: 1px solid var(--border);
+        }
+
+        .btn-transpose {
+            background: #475569;
+            font-size: 0.7rem;
+            height: 30px;
+            padding: 0 8px;
         }
 
         /* Workspace */
@@ -370,10 +382,16 @@
 
     <header>
         <div class="logo-group">
-            <div class="logo">ChordFlow Studio</div>
+            <div class="logo">🎸ChordFlow Studio</div>
             <div id="saveStatus">✓ Auto-saved</div>
         </div>
         <div class="controls">
+            <div
+                style="display:flex; align-items:center; gap:4px; margin-right:10px; border-right:1px solid var(--border); padding-right:10px;">
+                <span style="font-size:0.6rem; color:var(--muted)">Key</span>
+                <button class="btn btn-transpose" onclick="transposeAll(-1)">♭</button>
+                <button class="btn btn-transpose" onclick="transposeAll(1)">♯</button>
+            </div>
             <div
                 style="display:flex; align-items:center; background:var(--surface-h); padding:0 8px; border-radius:6px; height:35px;">
                 <span style="font-size:0.6rem; color:var(--muted); margin-right:5px;">BPM</span>
@@ -403,7 +421,7 @@
             <div id="content"></div>
             <div id="hint"
                 style="text-align:center; padding:50px; color:var(--muted); border:2px dashed var(--border); border-radius:15px; margin-top:10px;">
-                サイドバーをタップして追加。<br>タイトルタップで名前と色を変更。
+                セクションを追加してください。<br>Keyの ♭/♯ ボタンで楽曲全体の転調が可能です。
             </div>
         </div>
     </div>
@@ -431,14 +449,22 @@
             <input type="text" id="secNameInput"
                 style="width:100%; height:40px; background:var(--bg); border:1px solid var(--border); color:white; border-radius:8px; padding:0 10px;">
         </div>
-        <div style="margin-bottom:20px;">
+        <div style="margin-bottom:15px;">
             <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:5px;">Color</label>
             <input type="color" id="secColorInput"
                 style="width:100%; height:45px; background:none; border:1px solid var(--border); padding:2px; border-radius:8px; cursor:pointer;">
         </div>
+        <div style="margin-bottom:20px; border-top:1px solid var(--border); padding-top:15px;">
+            <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:10px;">Transpose this
+                section</label>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-sub" style="flex:1" onclick="transposeCurrentSec(-1)">♭ Semitone</button>
+                <button class="btn btn-sub" style="flex:1" onclick="transposeCurrentSec(1)">♯ Semitone</button>
+            </div>
+        </div>
         <div style="display:flex; gap:10px;">
             <button class="btn" style="flex:1; background:var(--surface-h)" onclick="closeSecModal()">Cancel</button>
-            <button class="btn" style="flex:1; background:var(--primary)" onclick="applySecEdit()">Save Changes</button>
+            <button class="btn" style="flex:1; background:var(--primary)" onclick="applySecEdit()">Save</button>
         </div>
     </div>
 
@@ -451,7 +477,7 @@
         let editingSecIdx = null;
         let clipboard = null;
 
-        const AUTOSAVE_KEY = 'chordflow_custom_v9';
+        const AUTOSAVE_KEY = 'chordflow_transpose_v10';
         const ROOTS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
         const SUFFIXES = ['', 'm', '7', 'm7', 'maj7', 'sus4', 'dim', 'aug', '6', '9', 'add9', 'm7-5'];
         const DEFAULT_COLORS = { 'Intro': '#3b82f6', 'Verse': '#10b981', 'Chorus': '#f43f5e', 'Solo': '#f59e0b' };
@@ -467,30 +493,77 @@
             render();
         });
 
+        // --- Transpose Engine ---
+        function transposeChord(chord, offset) {
+            if (!chord) return '';
+
+            // コードをルートとそれ以外に分離
+            let root = '';
+            let rest = '';
+
+            if (chord.length > 1 && (chord[1] === '#' || chord[1] === 'b')) {
+                root = chord.substring(0, 2);
+                rest = chord.substring(2);
+            } else {
+                root = chord.substring(0, 1);
+                rest = chord.substring(1);
+            }
+
+            // 正規化（Db -> C# など）
+            const normalizedRoots = { 'Db': 'C#', 'D#': 'Eb', 'Gb': 'F#', 'G#': 'Ab', 'A#': 'Bb' };
+            let currentRoot = normalizedRoots[root] || root;
+
+            let idx = ROOTS.indexOf(currentRoot);
+            if (idx === -1) return chord; // 判別不能な場合はそのまま返す
+
+            let newIdx = (idx + offset) % 12;
+            if (newIdx < 0) newIdx += 12;
+
+            return ROOTS[newIdx] + rest;
+        }
+
+        function transposeAll(offset) {
+            if (songData.length === 0) return;
+            songData.forEach(sec => {
+                sec.measures.forEach(measure => {
+                    for (let i = 0; i < measure.length; i++) {
+                        measure[i] = transposeChord(measure[i], offset);
+                    }
+                });
+            });
+            render();
+        }
+
+        function transposeCurrentSec(offset) {
+            if (editingSecIdx === null) return;
+            const sec = songData[editingSecIdx];
+            sec.measures.forEach(measure => {
+                for (let i = 0; i < measure.length; i++) {
+                    measure[i] = transposeChord(measure[i], offset);
+                }
+            });
+            render();
+            // モーダル内のプレビューはないが、裏側でデータは更新される
+        }
+
+        // --- Standard Functions ---
         function render() {
             const cont = document.getElementById('content');
             const hint = document.getElementById('hint');
             cont.innerHTML = '';
-
-            if (songData.length === 0) {
-                hint.style.display = 'block';
-            } else {
+            if (songData.length === 0) { hint.style.display = 'block'; } else {
                 hint.style.display = 'none';
-                songData.forEach((sec, sIdx) => {
-                    cont.appendChild(createSectionDOM(sec, sIdx));
-                });
+                songData.forEach((sec, sIdx) => cont.appendChild(createSectionDOM(sec, sIdx)));
             }
             document.getElementById('pasteBtn').disabled = !clipboard;
             autoSave();
         }
 
         function createSectionDOM(sec, sIdx) {
-            // 後方互換性：colorがない場合はタイプ名からデフォルト色を取得
             const cardColor = sec.color || DEFAULT_COLORS[sec.type] || '#8b5cf6';
             const card = document.createElement('div');
             card.className = 'section-card';
             card.style.borderLeftColor = cardColor;
-
             const header = document.createElement('div');
             header.className = 'section-header';
             header.innerHTML = `
@@ -513,82 +586,46 @@
             </div>
         `;
             card.appendChild(header);
-
             const grid = document.createElement('div');
             grid.className = 'measure-grid';
             sec.measures.forEach((m, mIdx) => {
-                const mDiv = document.createElement('div');
-                mDiv.className = 'measure';
-                mDiv.id = `m-${sIdx}-${mIdx}`;
-
-                const mHead = document.createElement('div');
-                mHead.style = "display:flex; justify-content:space-between; font-size:0.55rem; color:var(--muted); font-weight:bold;";
+                const mDiv = document.createElement('div'); mDiv.className = 'measure'; mDiv.id = `m-${sIdx}-${mIdx}`;
+                const mHead = document.createElement('div'); mHead.style = "display:flex; justify-content:space-between; font-size:0.55rem; color:var(--muted); font-weight:bold;";
                 mHead.innerHTML = `<span>MEASURE ${mIdx + 1}</span><span style="cursor:pointer" onclick="removeMeasure(${sIdx},${mIdx})">✕</span>`;
                 mDiv.appendChild(mHead);
-
-                const bRow = document.createElement('div');
-                bRow.className = 'beats-row';
-                const cols = sec.beats > 4 ? 4 : sec.beats;
-                bRow.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-
+                const bRow = document.createElement('div'); bRow.className = 'beats-row';
+                const cols = sec.beats > 4 ? 4 : sec.beats; bRow.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
                 m.forEach((chord, bIdx) => {
-                    const slot = document.createElement('div');
-                    slot.className = `beat-slot ${chord ? '' : 'empty'}`;
-                    slot.id = `b-${sIdx}-${mIdx}-${bIdx}`;
-                    slot.innerText = chord || '•';
-                    slot.onclick = () => openPicker(sIdx, mIdx, bIdx);
-                    bRow.appendChild(slot);
+                    const slot = document.createElement('div'); slot.className = `beat-slot ${chord ? '' : 'empty'}`; slot.id = `b-${sIdx}-${mIdx}-${bIdx}`;
+                    slot.innerText = chord || '•'; slot.onclick = () => openPicker(sIdx, mIdx, bIdx); bRow.appendChild(slot);
                 });
-                mDiv.appendChild(bRow);
-                grid.appendChild(mDiv);
+                mDiv.appendChild(bRow); grid.appendChild(mDiv);
             });
-
-            const addM = document.createElement('div');
-            addM.className = 'beat-slot';
-            addM.style = "border:1px dashed var(--border); height:80px; color:var(--muted); font-size:0.7rem;";
-            addM.innerText = "+ ADD MEASURE";
-            addM.onclick = () => addMeasure(sIdx);
-            grid.appendChild(addM);
-
+            const addM = document.createElement('div'); addM.className = 'beat-slot'; addM.style = "border:1px dashed var(--border); height:80px; color:var(--muted); font-size:0.7rem;";
+            addM.innerText = "+ ADD MEASURE"; addM.onclick = () => addMeasure(sIdx); grid.appendChild(addM);
             card.appendChild(grid);
             return card;
         }
 
-        // --- Section Editing Functions ---
         function openSecModal(idx) {
-            editingSecIdx = idx;
-            const sec = songData[idx];
+            editingSecIdx = idx; const sec = songData[idx];
             document.getElementById('secNameInput').value = sec.type;
             document.getElementById('secColorInput').value = sec.color || DEFAULT_COLORS[sec.type] || '#8b5cf6';
             document.getElementById('secOverlay').style.display = 'block';
             document.getElementById('secEditModal').style.display = 'block';
         }
-
-        function closeSecModal() {
-            document.getElementById('secOverlay').style.display = 'none';
-            document.getElementById('secEditModal').style.display = 'none';
-            editingSecIdx = null;
-        }
-
+        function closeSecModal() { document.getElementById('secOverlay').style.display = 'none'; document.getElementById('secEditModal').style.display = 'none'; editingSecIdx = null; }
         function applySecEdit() {
             if (editingSecIdx === null) return;
-            const newName = document.getElementById('secNameInput').value || 'Untitled';
-            const newColor = document.getElementById('secColorInput').value;
-
-            songData[editingSecIdx].type = newName;
-            songData[editingSecIdx].color = newColor;
-
-            render();
-            closeSecModal();
+            songData[editingSecIdx].type = document.getElementById('secNameInput').value || 'Untitled';
+            songData[editingSecIdx].color = document.getElementById('secColorInput').value;
+            render(); closeSecModal();
         }
 
-        // --- Standard Actions ---
         function addSec(type) {
             const color = DEFAULT_COLORS[type] || '#8b5cf6';
             songData.push({ type: type, color: color, beats: 4, repeat: 1, measures: [['', '', '', '']] });
-            render();
-            const t = document.getElementById('timeline');
-            setTimeout(() => t.scrollTop = t.scrollHeight, 50);
+            render(); const t = document.getElementById('timeline'); setTimeout(() => t.scrollTop = t.scrollHeight, 50);
         }
         function removeSec(i) { if (confirm("Delete section?")) { songData.splice(i, 1); render(); } }
         function copySec(i) { clipboard = JSON.parse(JSON.stringify(songData[i])); render(); }
@@ -597,17 +634,13 @@
         function removeMeasure(s, m) { songData[s].measures.splice(m, 1); render(); }
         function updateRepeat(s, val) { songData[s].repeat = parseInt(val) || 1; autoSave(); }
         function updateBeats(s, val) {
-            const nb = parseInt(val);
-            songData[s].beats = nb;
+            const nb = parseInt(val); songData[s].beats = nb;
             songData[s].measures = songData[s].measures.map(m => {
-                let nm = new Array(nb).fill('');
-                for (let i = 0; i < Math.min(m.length, nb); i++) nm[i] = m[i];
-                return nm;
+                let nm = new Array(nb).fill(''); for (let i = 0; i < Math.min(m.length, nb); i++) nm[i] = m[i]; return nm;
             });
             render();
         }
 
-        // --- Chord Picker ---
         function buildPickerUI() {
             const rg = document.getElementById('rootGrid');
             ROOTS.forEach(r => {
@@ -628,40 +661,27 @@
             document.getElementById('chordOverlay').style.display = 'block';
             document.getElementById('chordPicker').style.display = 'block';
         }
-        function closePicker() {
-            document.getElementById('chordOverlay').style.display = 'none';
-            document.getElementById('chordPicker').style.display = 'none';
-        }
-        function updateChordPreview() {
-            document.getElementById('chordPreview').innerText = document.getElementById('customInput').value || (editingChord.root + editingChord.suf);
-        }
+        function closePicker() { document.getElementById('chordOverlay').style.display = 'none'; document.getElementById('chordPicker').style.display = 'none'; }
+        function updateChordPreview() { document.getElementById('chordPreview').innerText = document.getElementById('customInput').value || (editingChord.root + editingChord.suf); }
         function applyChord(val) {
             const final = (val === '') ? '' : (document.getElementById('customInput').value || (editingChord.root + editingChord.suf));
             songData[editingChord.s].measures[editingChord.m][editingChord.b] = final;
-            render();
-            closePicker();
+            render(); closePicker();
         }
 
-        // --- Audio ---
         function togglePlay() { isPlaying ? stop() : play(); }
         function play() {
             if (songData.length === 0) return;
-            isPlaying = true;
-            const btn = document.getElementById('playBtn');
-            btn.innerText = '■ STOP'; btn.className = 'btn btn-stop';
-            playState = { s: 0, m: 0, b: -1, r: 1 };
-            playLoop();
+            isPlaying = true; const btn = document.getElementById('playBtn'); btn.innerText = '■ STOP'; btn.className = 'btn btn-stop';
+            playState = { s: 0, m: 0, b: -1, r: 1 }; playLoop();
         }
         function stop() {
-            isPlaying = false; clearTimeout(playTimer);
-            const btn = document.getElementById('playBtn');
-            btn.innerText = '▶ PLAY'; btn.className = 'btn btn-play';
+            isPlaying = false; clearTimeout(playTimer); const btn = document.getElementById('playBtn'); btn.innerText = '▶ PLAY'; btn.className = 'btn btn-play';
             document.querySelectorAll('.current, .active').forEach(e => e.classList.remove('current', 'active'));
         }
         function playLoop() {
             if (!isPlaying) return;
-            const curSec = songData[playState.s];
-            if (!curSec) { stop(); return; }
+            const curSec = songData[playState.s]; if (!curSec) { stop(); return; }
             playState.b++;
             if (playState.b >= curSec.beats) { playState.b = 0; playState.m++; }
             if (playState.m >= curSec.measures.length) {
@@ -682,41 +702,24 @@
             playTimer = setTimeout(playLoop, interval);
         }
 
-        // --- Storage & Files ---
         function autoSave() {
-            const state = { bpm: document.getElementById('bpm').value, data: songData };
-            localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
-            const s = document.getElementById('saveStatus');
-            s.style.opacity = 1; setTimeout(() => s.style.opacity = 0, 1500);
+            localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ bpm: document.getElementById('bpm').value, data: songData }));
+            const s = document.getElementById('saveStatus'); s.style.opacity = 1; setTimeout(() => s.style.opacity = 0, 1500);
         }
         function loadFromStorage() {
             const saved = localStorage.getItem(AUTOSAVE_KEY);
             if (saved) {
-                try {
-                    const p = JSON.parse(saved);
-                    songData = p.data || [];
-                    document.getElementById('bpm').value = p.bpm || 120;
-                } catch (e) { console.error("Load failed"); }
+                try { const p = JSON.parse(saved); songData = p.data || []; document.getElementById('bpm').value = p.bpm || 120; } catch (e) { }
             }
         }
         function exportFile() {
             const blob = new Blob([JSON.stringify({ bpm: document.getElementById('bpm').value, data: songData }, null, 2)], { type: 'application/json' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `song_flow_${new Date().getTime()}.json`;
-            a.click();
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `chordflow_${new Date().getTime()}.json`; a.click();
         }
         function importFile(e) {
             const reader = new FileReader();
             reader.onload = (ev) => {
-                try {
-                    const p = JSON.parse(ev.target.result);
-                    if (p.data) {
-                        songData = p.data;
-                        document.getElementById('bpm').value = p.bpm || 120;
-                        render();
-                    }
-                } catch (err) { alert("Invalid file"); }
+                try { const p = JSON.parse(ev.target.result); if (p.data) { songData = p.data; document.getElementById('bpm').value = p.bpm || 120; render(); } } catch (err) { alert("Invalid file"); }
             };
             reader.readAsText(e.target.files[0]);
         }
