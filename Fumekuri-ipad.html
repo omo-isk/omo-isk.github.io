@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>ChordFlow iPad</title>
+    <style>
+        /* iPad-Specific CSS Reset & Variables */
+        :root {
+            --bg: #121212; --surface: #1e1e1e; --surface-2: #2c2c2c;
+            --primary: #6366f1; --text: #f8fafc; --muted: #94a3b8;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg); color: var(--text);
+            margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        /* Large Header for Touch */
+        header {
+            background: var(--surface); height: 70px; padding: 0 15px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid #333; flex-shrink: 0;
+        }
+        .header-left { font-weight: 800; font-size: 1.2rem; background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; color: transparent; }
+        .controls { display: flex; gap: 12px; align-items: center; }
+        
+        /* Big Buttons */
+        .btn {
+            height: 44px; padding: 0 20px; border-radius: 8px; border: none; font-weight: bold; color: white;
+            font-size: 1rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn-play { background: #10b981; width: 100px; }
+        .btn-stop { background: #ef4444; width: 100px; }
+        .btn-icon { background: var(--surface-2); color: var(--text); width: 44px; padding: 0; font-size: 1.2rem; }
+        
+        .bpm-input {
+            width: 60px; height: 44px; background: var(--surface-2); border: none; color: white;
+            text-align: center; font-size: 1.2rem; border-radius: 8px; font-weight: bold;
+        }
+
+        /* Main Workspace */
+        .workspace { display: flex; flex: 1; overflow: hidden; }
+        
+        /* Touch Sidebar */
+        .sidebar {
+            width: 140px; background: var(--surface); border-right: 1px solid #333;
+            padding: 15px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto;
+        }
+        .sidebar-label { color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        
+        /* Tappable Palette Items */
+        .palette-btn {
+            height: 50px; background: var(--surface-2); border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; border-left: 6px solid #ccc; font-size: 1rem;
+            transition: transform 0.1s;
+        }
+        .palette-btn:active { transform: scale(0.95); background: #333; }
+        .palette-btn[data-type="Intro"] { border-color: #3b82f6; }
+        .palette-btn[data-type="Verse"] { border-color: #10b981; }
+        .palette-btn[data-type="Chorus"] { border-color: #f43f5e; }
+        .palette-btn[data-type="Solo"] { border-color: #f59e0b; }
+        .btn-custom { border: 2px dashed var(--muted); background: transparent; color: var(--muted); border-left: none; }
+
+        /* Scrollable Timeline */
+        .timeline { flex: 1; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .timeline-spacer { height: 100px; } /* Space for scrolling past bottom */
+
+        /* Section Cards */
+        .section-card {
+            background: var(--surface); border-radius: 12px; padding: 15px; margin-bottom: 25px;
+            border: 1px solid #333; border-left-width: 6px; border-left-style: solid;
+        }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-weight: bold; font-size: 1.1rem; }
+        .btn-del { width: 36px; height: 36px; background: transparent; color: #666; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; border: none; }
+
+        /* Measure & Beats */
+        .measure-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+        .measure { background: var(--bg); border-radius: 8px; padding: 8px; border: 1px solid #333; }
+        .measure.active { background: #1e1b4b; border-color: var(--primary); }
+        
+        .beats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; }
+        .beat-slot {
+            height: 60px; background: var(--surface-2); border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 1.2rem;
+        }
+        .beat-slot:active { background: #404040; }
+        .beat-slot.current { background: var(--primary); color: white; transform: scale(1.05); box-shadow: 0 4px 10px rgba(99,102,241,0.4); }
+
+        .add-measure-btn {
+            height: 95px; border: 2px dashed #444; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; color: #444;
+        }
+        .add-measure-btn:active { background: rgba(255,255,255,0.05); }
+
+        /* Touch Optimized Modal */
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:200; backdrop-filter: blur(4px); }
+        .modal {
+            position: fixed; bottom: 0; left: 0; width: 100%; background: var(--surface);
+            border-radius: 20px 20px 0 0; padding: 25px; box-sizing: border-box; z-index: 201;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5); transform: translateY(100%); transition: transform 0.3s;
+        }
+        .modal.show { transform: translateY(0); }
+
+        .preview-text { text-align: center; font-size: 2.5rem; font-weight: 800; color: var(--primary); margin-bottom: 20px; }
+        .btn-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 15px; }
+        .grid-item {
+            height: 50px; background: var(--surface-2); border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 1rem;
+        }
+        .grid-item.selected { background: var(--primary); color: white; }
+        
+        .action-row { display: flex; gap: 10px; margin-top: 20px; }
+        .full-btn { flex: 1; height: 55px; font-size: 1.1rem; }
+
+        /* Save/Load List */
+        .song-list-item { padding: 15px; border-bottom: 1px solid #333; font-size: 1.1rem; display: flex; justify-content: space-between; }
+        .song-list-item:active { background: var(--surface-2); }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">ChordFlow Pad</div>
+    <div class="controls">
+        <input type="number" id="bpmInput" class="bpm-input" value="120">
+        <button class="btn btn-icon" onclick="saveSong()">💾</button>
+        <button class="btn btn-icon" onclick="openLoadModal()">📂</button>
+        <button class="btn btn-play" id="playBtn" onclick="togglePlay()">PLAY</button>
+    </div>
+</header>
+
+<div class="workspace">
+    <div class="sidebar">
+        <div class="sidebar-label">Add Section</div>
+        <div class="palette-btn" onclick="addSection('Intro')" data-type="Intro">Intro</div>
+        <div class="palette-btn" onclick="addSection('Verse')" data-type="Verse">Verse</div>
+        <div class="palette-btn" onclick="addSection('Chorus')" data-type="Chorus">Chorus</div>
+        <div class="palette-btn" onclick="addSection('Solo')" data-type="Solo">Solo</div>
+        <div class="palette-btn btn-custom" onclick="addCustomSection()">＋ Custom</div>
+    </div>
+    
+    <div class="timeline" id="timeline">
+        <div id="timeline-content"></div>
+        <div class="timeline-spacer"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="pickerOverlay" onclick="if(event.target===this) closeModal()">
+    <div class="modal" id="pickerModal">
+        <div class="preview-text" id="previewChord">C</div>
+        
+        <div class="sidebar-label">ROOT</div>
+        <div class="btn-grid" id="rootGrid"></div>
+        
+        <div class="sidebar-label">TYPE</div>
+        <div class="btn-grid" id="suffixGrid" style="grid-template-columns: repeat(4, 1fr);"></div>
+        
+        <input type="text" id="customInput" placeholder="Custom Input" style="width:100%; height:50px; background:var(--bg); border:none; color:white; font-size:1.2rem; padding:0 15px; border-radius:8px; box-sizing:border-box;">
+
+        <div class="action-row">
+            <button class="btn btn-stop full-btn" onclick="setChord('')">Clear</button>
+            <button class="btn btn-play full-btn" style="background:var(--primary)" onclick="applyChord()">Apply</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="loadOverlay" style="align-items:center; justify-content:center; display:none;">
+    <div class="section-card" style="width:80%; max-height:80%; overflow:hidden; display:flex; flex-direction:column; background:var(--surface); border:1px solid #444; padding:0;">
+        <div style="padding:20px; border-bottom:1px solid #333; font-weight:bold; font-size:1.2rem;">Load Song</div>
+        <div id="songList" style="overflow-y:auto; flex:1;"></div>
+        <div style="padding:15px;">
+            <button class="btn btn-icon" style="width:100%;" onclick="document.getElementById('loadOverlay').style.display='none'">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Logic (Similar to Standard but optimized events) ---
+    let songData = [];
+    let currentSongName = "Untitled";
+    let isPlaying = false;
+    let playTimer = null;
+    let playState = { sIdx:0, mIdx:0, bIdx:-1 };
+    let editing = { sIdx:0, mIdx:0, bIdx:0, root:'C', suffix:'' };
+
+    const ROOTS = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+    const SUFFIXES = ['','m','7','m7','maj7','sus4','dim','aug','6','add9','m7-5'];
+
+    function init() {
+        buildPicker();
+        // Default song
+        if(!localStorage.getItem('chordFlow_library')) addSection('Intro');
+        else loadLastSongOrInit();
+        render();
+    }
+
+    function loadLastSongOrInit() {
+         // Auto-load logic could go here, for now just clean init
+         songData = [];
+         addSection('Intro');
+    }
+
+    function getColor(type) {
+        const colors = { 'Intro':'#3b82f6', 'Verse':'#10b981', 'Chorus':'#f43f5e', 'Solo':'#f59e0b' };
+        if(colors[type]) return colors[type];
+        let hash = 0;
+        for (let i=0; i<type.length; i++) hash = type.charCodeAt(i) + ((hash << 5) - hash);
+        const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+        return '#' + "00000".substring(0, 6 - c.length) + c;
+    }
+
+    function render() {
+        const el = document.getElementById('timeline-content');
+        el.innerHTML = '';
+        
+        songData.forEach((sec, sIdx) => {
+            const color = getColor(sec.type);
+            const div = document.createElement('div');
+            div.className = 'section-card';
+            div.style.borderLeftColor = color;
+            
+            let html = `<div class="section-header" style="color:${color}">
+                ${sec.type} 
+                <button class="btn-del" onclick="removeSection(${sIdx})">×</button>
+            </div><div class="measure-grid">`;
+
+            sec.measures.forEach((measure, mIdx) => {
+                html += `<div class="measure" id="m-${sIdx}-${mIdx}">
+                    <div style="display:flex; justify-content:space-between; color:#666; font-size:0.8rem; margin-bottom:5px;">
+                        <span>${mIdx+1}</span><span onclick="removeMeasure(${sIdx},${mIdx})">×</span>
+                    </div>
+                    <div class="beats-row">`;
+                measure.forEach((chord, bIdx) => {
+                    html += `<div class="beat-slot ${chord?'':'empty'}" id="b-${sIdx}-${mIdx}-${bIdx}" onclick="openPicker(${sIdx},${mIdx},${bIdx})">
+                        ${chord || '•'}
+                    </div>`;
+                });
+                html += `</div></div>`;
+            });
+            
+            html += `<div class="add-measure-btn" onclick="addMeasure(${sIdx})">+</div>`;
+            html += `</div>`;
+            
+            div.innerHTML = html;
+            el.appendChild(div);
+        });
+    }
+
+    // --- Touch Actions ---
+    function addSection(type) {
+        songData.push({ type: type, measures: [['C','','',''], ['G','','','']] });
+        render();
+        // Auto scroll to bottom
+        setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
+    }
+
+    function addCustomSection() {
+        const name = prompt("Section Name?");
+        if(name) addSection(name);
+    }
+
+    function removeSection(idx) { if(confirm('Delete section?')) { songData.splice(idx,1); render(); } }
+    function addMeasure(sIdx) { songData[sIdx].measures.push(['','','','']); render(); }
+    function removeMeasure(s,m) { songData[s].measures.splice(m,1); render(); }
+
+    // --- Picker (Bottom Sheet) ---
+    function buildPicker() {
+        const rg = document.getElementById('rootGrid');
+        ROOTS.forEach(r => {
+            const b = document.createElement('div'); b.className='grid-item'; b.innerText=r;
+            b.onclick = () => selectRoot(r, b);
+            rg.appendChild(b);
+        });
+        const sg = document.getElementById('suffixGrid');
+        SUFFIXES.forEach(s => {
+            const b = document.createElement('div'); b.className='grid-item'; b.innerText=s||'Maj';
+            b.onclick = () => selectSuffix(s, b);
+            sg.appendChild(b);
+        });
+        document.getElementById('customInput').addEventListener('input', updatePreview);
+    }
+
+    function openPicker(s,m,b) {
+        editing = { sIdx:s, mIdx:m, bIdx:b, root:'C', suffix:'' };
+        document.getElementById('customInput').value = songData[s].measures[m][b];
+        updatePreview();
+        
+        document.getElementById('pickerOverlay').style.display = 'block';
+        setTimeout(() => document.getElementById('pickerModal').classList.add('show'), 10);
+    }
+
+    function closeModal() {
+        document.getElementById('pickerModal').classList.remove('show');
+        setTimeout(() => document.getElementById('pickerOverlay').style.display = 'none', 300);
+    }
+
+    function selectRoot(r, el) {
+        editing.root = r; 
+        document.querySelectorAll('#rootGrid .selected').forEach(e=>e.classList.remove('selected'));
+        el.classList.add('selected'); document.getElementById('customInput').value=''; updatePreview();
+    }
+    function selectSuffix(s, el) {
+        editing.suffix = s; 
+        document.querySelectorAll('#suffixGrid .selected').forEach(e=>e.classList.remove('selected'));
+        el.classList.add('selected'); document.getElementById('customInput').value=''; updatePreview();
+    }
+    function updatePreview() {
+        const c = document.getElementById('customInput').value;
+        document.getElementById('previewChord').innerText = c || (editing.root + editing.suffix);
+    }
+    function applyChord() { setChord(document.getElementById('customInput').value || (editing.root+editing.suffix)); }
+    function setChord(val) { songData[editing.sIdx].measures[editing.mIdx][editing.bIdx] = val; render(); closeModal(); }
+
+    // --- Save/Load ---
+    function getLib() { return JSON.parse(localStorage.getItem('chordFlow_library') || '{}'); }
+    function saveSong() {
+        const name = prompt("Save Song Name:", currentSongName);
+        if(!name) return;
+        const lib = getLib();
+        lib[name] = { bpm: document.getElementById('bpmInput').value, data: songData };
+        localStorage.setItem('chordFlow_library', JSON.stringify(lib));
+        currentSongName = name;
+        alert("Saved!");
+    }
+    function openLoadModal() {
+        const lib = getLib();
+        const list = document.getElementById('songList');
+        list.innerHTML = '';
+        Object.keys(lib).forEach(name => {
+            const d = document.createElement('div'); d.className = 'song-list-item';
+            d.innerHTML = `<span>${name}</span>`;
+            d.onclick = () => {
+                songData = lib[name].data;
+                document.getElementById('bpmInput').value = lib[name].bpm || 120;
+                currentSongName = name;
+                render();
+                document.getElementById('loadOverlay').style.display='none';
+            };
+            list.appendChild(d);
+        });
+        document.getElementById('loadOverlay').style.display = 'flex';
+    }
+
+    // --- Play ---
+    function togglePlay() { if(isPlaying) stop(); else play(); }
+    function play() {
+        isPlaying = true;
+        document.getElementById('playBtn').innerText = 'STOP';
+        document.getElementById('playBtn').classList.replace('btn-play','btn-stop');
+        playState = { sIdx:0, mIdx:0, bIdx:-1 };
+        playLoop();
+    }
+    function stop() {
+        isPlaying = false; clearTimeout(playTimer);
+        document.getElementById('playBtn').innerText = 'PLAY';
+        document.getElementById('playBtn').classList.replace('btn-stop','btn-play');
+        document.querySelectorAll('.current, .active').forEach(e=>e.classList.remove('current','active'));
+    }
+    function playLoop() {
+        if(!isPlaying) return;
+        playState.bIdx++;
+        if(playState.bIdx>=4) { playState.bIdx=0; playState.mIdx++; }
+        
+        if(songData[playState.sIdx] && playState.mIdx >= songData[playState.sIdx].measures.length) {
+            playState.mIdx=0; playState.sIdx++; playState.bIdx=0;
+        }
+        if(!songData[playState.sIdx]) { stop(); return; }
+
+        document.querySelectorAll('.current').forEach(e=>e.classList.remove('current'));
+        
+        if(playState.bIdx===0) {
+            document.querySelectorAll('.active').forEach(e=>e.classList.remove('active'));
+            const m = document.getElementById(`m-${playState.sIdx}-${playState.mIdx}`);
+            if(m) { m.classList.add('active'); m.scrollIntoView({behavior:'smooth', block:'center'}); }
+        }
+        const b = document.getElementById(`b-${playState.sIdx}-${playState.mIdx}-${playState.bIdx}`);
+        if(b) b.classList.add('current');
+
+        playTimer = setTimeout(playLoop, (60/document.getElementById('bpmInput').value)*1000);
+    }
+
+    init();
+</script>
+</body>
+</html>

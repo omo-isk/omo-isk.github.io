@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ChordFlow Studio - Standard</title>
+    <style>
+        :root {
+            --bg: #121212; --surface: #1e1e1e; --surface-light: #2c2c2c;
+            --primary: #6366f1; --accent: #8b5cf6; --text: #e2e8f0; --muted: #94a3b8;
+            --border: #333;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* Header */
+        header { background: var(--surface); padding: 0 20px; height: 60px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+        .logo { font-weight: 800; font-size: 1.2rem; background: linear-gradient(to right, #6366f1, #ec4899); -webkit-background-clip: text; color: transparent; }
+        .controls { display: flex; gap: 10px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; transition: 0.2s; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-play { background: #10b981; } .btn-stop { background: #ef4444; }
+        .btn-save { background: #3b82f6; } .btn-load { background: var(--surface-light); border: 1px solid var(--muted); color: var(--text); }
+        input[type="number"] { background: var(--surface-light); border: none; color: white; width: 50px; padding: 5px; text-align: center; border-radius: 4px; font-weight: bold; }
+
+        /* Layout */
+        .workspace { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 180px; background: var(--surface); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+        .palette-item { padding: 12px; background: var(--surface-light); border-radius: 6px; cursor: grab; text-align: center; font-weight: bold; border-left: 4px solid #ccc; transition: 0.2s; }
+        .palette-item:hover { background: #333; }
+        
+        /* Custom Button */
+        .btn-custom { border: 2px dashed var(--muted); background: transparent; color: var(--muted); cursor: pointer; padding: 10px; text-align: center; border-radius: 6px; font-weight: bold; }
+        .btn-custom:hover { border-color: var(--text); color: var(--text); }
+
+        /* Timeline */
+        .timeline { flex: 1; padding: 30px; overflow-y: auto; scroll-behavior: smooth; }
+        .section-block { background: var(--surface); border-radius: 10px; padding: 15px; margin-bottom: 20px; border: 1px solid var(--border); position: relative; border-left-width: 5px; border-left-style: solid; }
+        .section-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; }
+        
+        .measure-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        .measure { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px; position: relative; }
+        .measure.active { border-color: var(--primary); background: #1a1b26; box-shadow: 0 0 0 2px var(--primary); }
+        
+        .beats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 5px; }
+        .beat { background: var(--surface-light); height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; font-weight: bold; position: relative; }
+        .beat:hover { background: #404040; }
+        .beat.current { background: var(--primary); color: white; }
+        .beat.empty { color: #444; }
+
+        /* Modals */
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:100; backdrop-filter: blur(2px); }
+        .modal { position: fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--surface); padding:25px; border-radius:12px; width:90%; max-width:400px; border:1px solid var(--border); z-index:101; }
+        .modal h3 { margin-top:0; color: var(--primary); }
+        
+        .song-list { max-height: 200px; overflow-y: auto; margin: 15px 0; border: 1px solid var(--border); border-radius: 6px; }
+        .song-item { padding: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .song-item:hover { background: var(--surface-light); }
+        
+        /* Chord Picker Grid */
+        .chord-grid-btn { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-bottom: 10px; }
+        .pick-btn { padding: 8px; background: var(--surface-light); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; text-align: center; font-size: 0.85rem; }
+        .pick-btn.selected { background: var(--primary); color: white; }
+
+        /* Dynamic Colors */
+        [data-type="Intro"] { border-color: #3b82f6; }
+        [data-type="Verse"] { border-color: #10b981; }
+        [data-type="Chorus"] { border-color: #f43f5e; }
+        [data-type="Solo"] { border-color: #f59e0b; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">ChordFlow PC</div>
+    <div class="controls">
+        <label style="font-size:0.8rem; color:var(--muted)">BPM</label>
+        <input type="number" id="bpmInput" value="120">
+        <button class="btn btn-save" onclick="saveSong()">💾 Save</button>
+        <button class="btn btn-load" onclick="openLoadModal()">📂 Load</button>
+        <button class="btn btn-play" onclick="togglePlay()" id="playBtn">▶ Play</button>
+    </div>
+</header>
+
+<div class="workspace">
+    <div class="sidebar">
+        <div style="font-size:0.8rem; color:var(--muted); text-transform:uppercase;">Palette</div>
+        <div class="palette-item" draggable="true" ondragstart="drag(event)" data-type="Intro">Intro</div>
+        <div class="palette-item" draggable="true" ondragstart="drag(event)" data-type="Verse">Verse</div>
+        <div class="palette-item" draggable="true" ondragstart="drag(event)" data-type="Chorus">Chorus</div>
+        <div class="palette-item" draggable="true" ondragstart="drag(event)" data-type="Solo">Solo</div>
+        <div class="btn-custom" onclick="addCustomSection()">＋ Custom</div>
+    </div>
+    
+    <div class="timeline" id="timeline" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <div id="timeline-content"></div>
+        <div style="text-align:center; padding:50px; border:2px dashed var(--border); color:var(--muted); border-radius:10px; margin-top:20px;">
+            Drag sections here
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="loadModalOverlay">
+    <div class="modal">
+        <h3>Saved Songs</h3>
+        <div class="song-list" id="songListContainer"></div>
+        <button class="btn" style="background:var(--muted); width:100%; justify-content:center;" onclick="closeModals()">Close</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="pickerOverlay">
+    <div class="modal">
+        <h2 id="previewChord" style="text-align:center; font-size:2rem; margin:0 0 15px 0;">C</h2>
+        <div class="chord-grid-btn" id="rootGrid"></div>
+        <div class="chord-grid-btn" id="suffixGrid" style="grid-template-columns: repeat(4, 1fr);"></div>
+        <input type="text" id="customInput" placeholder="Custom (e.g. F#m7-5)" style="width:100%; padding:10px; background:var(--bg); border:1px solid var(--border); color:white; box-sizing:border-box; margin-bottom:15px;">
+        <div style="display:flex; gap:10px;">
+            <button class="btn btn-stop" style="flex:1; justify-content:center;" onclick="setChord('')">Clear</button>
+            <button class="btn btn-save" style="flex:1; justify-content:center;" onclick="applyChord()">Apply</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Data & State ---
+    let songData = [];
+    let currentSongName = "Untitled";
+    let isPlaying = false;
+    let playTimer = null;
+    let playState = { sIdx:0, mIdx:0, bIdx:-1 };
+    
+    // Edit State
+    let editing = { sIdx:0, mIdx:0, bIdx:0, root:'C', suffix:'' };
+
+    const ROOTS = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+    const SUFFIXES = ['','m','7','m7','maj7','sus4','dim','aug','6','add9','m7-5'];
+
+    // --- Init ---
+    function init() {
+        buildPicker();
+        renderTimeline();
+    }
+
+    // --- Core Logic ---
+    function getColor(type) {
+        const colors = { 'Intro':'#3b82f6', 'Verse':'#10b981', 'Chorus':'#f43f5e', 'Solo':'#f59e0b' };
+        if(colors[type]) return colors[type];
+        // Hash for custom sections
+        let hash = 0;
+        for (let i = 0; i < type.length; i++) hash = type.charCodeAt(i) + ((hash << 5) - hash);
+        const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+        return '#' + "00000".substring(0, 6 - c.length) + c;
+    }
+
+    function renderTimeline() {
+        const el = document.getElementById('timeline-content');
+        el.innerHTML = '';
+        
+        songData.forEach((sec, sIdx) => {
+            const color = getColor(sec.type);
+            const div = document.createElement('div');
+            div.className = 'section-block';
+            div.style.borderColor = color;
+            
+            let html = `<div class="section-header" style="color:${color}">
+                <span>${sec.type}</span> <button onclick="removeSection(${sIdx})" style="background:none; border:none; color:#666; cursor:pointer;">×</button>
+            </div><div class="measure-grid">`;
+
+            sec.measures.forEach((measure, mIdx) => {
+                html += `<div class="measure" id="m-${sIdx}-${mIdx}">
+                    <div style="font-size:0.6rem; color:#666; margin-bottom:2px;">${mIdx+1} <span onclick="removeMeasure(${sIdx},${mIdx})" style="cursor:pointer; float:right;">×</span></div>
+                    <div class="beats">`;
+                measure.forEach((chord, bIdx) => {
+                    html += `<div class="beat ${chord?'':'empty'}" id="b-${sIdx}-${mIdx}-${bIdx}" onclick="openPicker(${sIdx},${mIdx},${bIdx})">
+                        ${chord || '•'}
+                    </div>`;
+                });
+                html += `</div></div>`;
+            });
+            
+            // Add Measure Button
+            html += `<div style="border:2px dashed #333; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#666;" onclick="addMeasure(${sIdx})">＋</div>`;
+            html += `</div>`; // End Grid
+            
+            div.innerHTML = html;
+            el.appendChild(div);
+        });
+    }
+
+    // --- Actions ---
+    function addSection(type) {
+        songData.push({ type: type, measures: [['C','','',''], ['G','','','']] });
+        renderTimeline();
+    }
+
+    function addCustomSection() {
+        const name = prompt("セクション名を入力してください (例: Bridge, Pre-Chorus)");
+        if(name) addSection(name);
+    }
+
+    function removeSection(idx) {
+        if(confirm('このセクションを削除しますか？')) {
+            songData.splice(idx, 1);
+            renderTimeline();
+        }
+    }
+
+    function addMeasure(sIdx) { songData[sIdx].measures.push(['','','','']); renderTimeline(); }
+    function removeMeasure(sIdx, mIdx) { songData[sIdx].measures.splice(mIdx, 1); renderTimeline(); }
+
+    // --- Drag & Drop ---
+    function allowDrop(ev) { ev.preventDefault(); }
+    function drag(ev) { ev.dataTransfer.setData("type", ev.target.dataset.type); }
+    function drop(ev) {
+        ev.preventDefault();
+        const type = ev.dataTransfer.getData("type");
+        if(type) addSection(type);
+    }
+
+    // --- Save & Load System ---
+    function getLibrary() {
+        return JSON.parse(localStorage.getItem('chordFlow_library') || '{}');
+    }
+
+    function saveSong() {
+        const name = prompt("保存する曲名を入力してください", currentSongName);
+        if(!name) return;
+        
+        const library = getLibrary();
+        if(library[name] && !confirm(`"${name}" は既に存在します。上書きしますか？`)) return;
+
+        library[name] = {
+            bpm: document.getElementById('bpmInput').value,
+            data: songData
+        };
+        localStorage.setItem('chordFlow_library', JSON.stringify(library));
+        currentSongName = name;
+        alert(`"${name}" を保存しました`);
+    }
+
+    function openLoadModal() {
+        const library = getLibrary();
+        const list = document.getElementById('songListContainer');
+        list.innerHTML = '';
+        
+        if(Object.keys(library).length === 0) {
+            list.innerHTML = '<div style="padding:10px; color:#666;">保存された曲はありません</div>';
+        } else {
+            Object.keys(library).forEach(name => {
+                const item = document.createElement('div');
+                item.className = 'song-item';
+                item.innerHTML = `<span>${name}</span> <span style="font-size:0.8rem; color:#666;">🗑</span>`;
+                // Load Click
+                item.onclick = (e) => {
+                    // Delete Check (if clicked icon area roughly, simplified here)
+                    loadSong(name);
+                };
+                // Separate delete button handling ideally
+                list.appendChild(item);
+            });
+        }
+        document.getElementById('loadModalOverlay').style.display = 'block';
+    }
+
+    function loadSong(name) {
+        const library = getLibrary();
+        if(library[name]) {
+            songData = library[name].data;
+            document.getElementById('bpmInput').value = library[name].bpm || 120;
+            currentSongName = name;
+            renderTimeline();
+            closeModals();
+        }
+    }
+
+    function closeModals() {
+        document.getElementById('loadModalOverlay').style.display = 'none';
+        document.getElementById('pickerOverlay').style.display = 'none';
+    }
+
+    // --- Chord Picker ---
+    function buildPicker() {
+        const rg = document.getElementById('rootGrid');
+        ROOTS.forEach(r => {
+            const b = document.createElement('div'); b.className='pick-btn'; b.innerText=r;
+            b.onclick = () => selectRoot(r, b);
+            rg.appendChild(b);
+        });
+        const sg = document.getElementById('suffixGrid');
+        SUFFIXES.forEach(s => {
+            const b = document.createElement('div'); b.className='pick-btn'; b.innerText=s||'Maj';
+            b.onclick = () => selectSuffix(s, b);
+            sg.appendChild(b);
+        });
+        document.getElementById('customInput').addEventListener('input', updatePreview);
+    }
+
+    function openPicker(s, m, b) {
+        editing = { sIdx:s, mIdx:m, bIdx:b, root:'C', suffix:'' };
+        document.getElementById('customInput').value = songData[s].measures[m][b];
+        updatePreview();
+        document.getElementById('pickerOverlay').style.display = 'block';
+    }
+
+    function selectRoot(r, el) {
+        editing.root = r; document.querySelectorAll('#rootGrid .selected').forEach(e=>e.classList.remove('selected'));
+        el.classList.add('selected'); document.getElementById('customInput').value=''; updatePreview();
+    }
+    function selectSuffix(s, el) {
+        editing.suffix = s; document.querySelectorAll('#suffixGrid .selected').forEach(e=>e.classList.remove('selected'));
+        el.classList.add('selected'); document.getElementById('customInput').value=''; updatePreview();
+    }
+    function updatePreview() {
+        const cust = document.getElementById('customInput').value;
+        document.getElementById('previewChord').innerText = cust || (editing.root + editing.suffix);
+    }
+    function applyChord() {
+        const val = document.getElementById('customInput').value || (editing.root + editing.suffix);
+        setChord(val);
+    }
+    function setChord(val) {
+        songData[editing.sIdx].measures[editing.mIdx][editing.bIdx] = val;
+        renderTimeline();
+        closeModals();
+    }
+
+    // --- Play Engine ---
+    function togglePlay() {
+        if(isPlaying) stop(); else play();
+    }
+    function play() {
+        isPlaying = true;
+        document.getElementById('playBtn').innerText = '■ Stop';
+        document.getElementById('playBtn').className = 'btn btn-stop';
+        playState = { sIdx:0, mIdx:0, bIdx:-1 };
+        playLoop();
+    }
+    function stop() {
+        isPlaying = false;
+        clearTimeout(playTimer);
+        document.getElementById('playBtn').innerText = '▶ Play';
+        document.getElementById('playBtn').className = 'btn btn-play';
+        document.querySelectorAll('.current, .active').forEach(e=>e.classList.remove('current','active'));
+    }
+    function playLoop() {
+        if(!isPlaying) return;
+        playState.bIdx++;
+        if(playState.bIdx >= 4) {
+            playState.bIdx = 0; playState.mIdx++;
+        }
+        
+        // Section transition check
+        if(songData[playState.sIdx] && playState.mIdx >= songData[playState.sIdx].measures.length) {
+            playState.mIdx = 0; playState.sIdx++;
+            playState.bIdx = 0; 
+        }
+
+        if(!songData[playState.sIdx]) { stop(); return; } // End of song
+
+        // Visuals
+        document.querySelectorAll('.current').forEach(e=>e.classList.remove('current'));
+        
+        // Measure Scroll
+        if(playState.bIdx === 0) {
+            document.querySelectorAll('.active').forEach(e=>e.classList.remove('active'));
+            const m = document.getElementById(`m-${playState.sIdx}-${playState.mIdx}`);
+            if(m) {
+                m.classList.add('active');
+                m.scrollIntoView({behavior:'smooth', block:'center'});
+            }
+        }
+        
+        const b = document.getElementById(`b-${playState.sIdx}-${playState.mIdx}-${playState.bIdx}`);
+        if(b) b.classList.add('current');
+
+        const bpm = parseInt(document.getElementById('bpmInput').value);
+        playTimer = setTimeout(playLoop, (60/bpm)*1000);
+    }
+
+    init();
+</script>
+</body>
+</html>
