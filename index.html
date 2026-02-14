@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ChordFlow Pro Ultra</title>
+    <title>ChordFlow Precision</title>
     <style>
         :root {
             --bg: #0f172a;
@@ -475,7 +475,7 @@
                     </div>
                     <div class="beats-row" style="grid-template-columns: repeat(${sec.beats > 4 ? sec.beats / 2 : sec.beats}, 1fr)"></div>
                 `;
-                    // 8拍子の時は2段に分かれるようにgrid-templateを調整(任意)
+                    // 8拍子の時は2段に (8/8 -> 4列x2行)
                     if (sec.beats > 4) {
                         mDiv.querySelector('.beats-row').style.gridTemplateColumns = `repeat(4, 1fr)`;
                     }
@@ -497,8 +497,6 @@
                 grid.appendChild(addM);
                 cont.appendChild(card);
             });
-
-            // クリップボードボタンの活性化
             document.getElementById('pasteBtn').disabled = !clipboard;
         }
 
@@ -516,7 +514,7 @@
 
         function copySec(idx) {
             clipboard = JSON.parse(JSON.stringify(songData[idx]));
-            render();
+            render(); // Update button state
         }
 
         function pasteSec() {
@@ -594,7 +592,7 @@
             closePicker();
         }
 
-        // --- Audio Engine ---
+        // --- Audio Engine (Precision Update) ---
         function togglePlay() { isPlaying ? stop() : play(); }
         function play() {
             if (!songData.length) return;
@@ -626,11 +624,21 @@
             const b = document.getElementById(`b-${playState.s}-${playState.m}-${playState.b}`);
             if (b) b.classList.add('current');
 
-            playTimer = setTimeout(playLoop, (60 / document.getElementById('bpm').value) * 1000);
+            // --- タイミング計算ロジック (NEW) ---
+            // 基本の4分音符の間隔
+            let interval = (60 / document.getElementById('bpm').value) * 1000;
+
+            // セクションの拍数が 6 or 8 の場合、分母は8(8分音符)とみなす
+            // そのため、再生間隔を半分(0.5倍)にして速く進める
+            if (currentSec.beats === 6 || currentSec.beats === 8) {
+                interval = interval * 0.5;
+            }
+
+            playTimer = setTimeout(playLoop, interval);
         }
 
         // --- Data Storage ---
-        const KEY = 'chordFlow_ultra_v5';
+        const KEY = 'chordFlow_precision_v6';
         function saveSong() {
             const n = prompt("Song Title?"); if (!n) return;
             const lib = JSON.parse(localStorage.getItem(KEY) || '{}');
