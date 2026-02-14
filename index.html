@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ChordFlow Precision</title>
+    <title>ChordFlow Loop Master</title>
     <style>
         :root {
             --bg: #0f172a;
@@ -93,6 +93,10 @@
             filter: brightness(1.2);
         }
 
+        .btn:active {
+            transform: scale(0.98);
+        }
+
         .btn:disabled {
             opacity: 0.3;
             cursor: not-allowed;
@@ -130,6 +134,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
+            overflow-y: auto;
         }
 
         .side-label {
@@ -140,6 +145,7 @@
             margin-bottom: 4px;
         }
 
+        /* 改善点：クリック可能であることを明示し、タップエリアを確保 */
         .palette-item {
             padding: 12px;
             border-radius: 10px;
@@ -147,9 +153,15 @@
             font-weight: bold;
             background: var(--surface-h);
             border-left: 5px solid #ccc;
-            cursor: grab;
+            cursor: pointer;
             user-select: none;
             font-size: 0.85rem;
+            transition: transform 0.1s;
+        }
+
+        .palette-item:active {
+            transform: scale(0.95);
+            background: #475569;
         }
 
         .timeline {
@@ -175,6 +187,8 @@
             align-items: center;
             margin-bottom: 15px;
             user-select: none;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .section-title-area {
@@ -182,6 +196,7 @@
             align-items: center;
             gap: 10px;
             cursor: move;
+            min-width: 100px;
         }
 
         /* Section Controls */
@@ -202,6 +217,19 @@
             font-weight: bold;
         }
 
+        .repeat-input {
+            width: 45px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--accent);
+            border-radius: 4px;
+            padding: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-align: center;
+            margin-right: 5px;
+        }
+
         .measure-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -214,6 +242,7 @@
             padding: 12px;
             border: 1px solid var(--border);
             position: relative;
+            transition: border-color 0.2s;
         }
 
         .measure.active {
@@ -319,6 +348,38 @@
                 display: none;
             }
 
+            /* iPad縦などはモーダル等の別UIが必要だが、今回はPCレイアウト維持か、簡易非表示 */
+            /* 今回は下部固定メニューにするなど本来は必要ですが、簡易的に「上部メニュー」等で対応 */
+            .sidebar {
+                display: flex;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 80px;
+                flex-direction: row;
+                border-right: none;
+                border-top: 1px solid var(--border);
+                padding: 10px;
+                z-index: 90;
+                overflow-x: auto;
+            }
+
+            .side-label {
+                display: none;
+            }
+
+            .palette-item {
+                min-width: 80px;
+                font-size: 0.7rem;
+                padding: 8px;
+            }
+
+            .timeline {
+                padding-bottom: 100px;
+            }
+
+            /* Footer space */
             .modal {
                 top: auto;
                 bottom: 0;
@@ -345,7 +406,7 @@
 <body>
 
     <header>
-        <div class="logo">🎸ChordFlow Studio</div>
+        <div class="logo">ChordFlow LOOP</div>
         <div class="controls">
             <div
                 style="display:flex; align-items:center; background:var(--surface-h); padding:0 10px; border-radius:8px; gap:8px;">
@@ -360,31 +421,27 @@
 
     <div class="workspace">
         <div class="sidebar">
-            <div class="side-label">Templates</div>
-            <div class="palette-item" draggable="true" data-type="Intro" ondragstart="evDragStart(event)"
-                style="border-color:#3b82f6">Intro</div>
-            <div class="palette-item" draggable="true" data-type="Verse" ondragstart="evDragStart(event)"
-                style="border-color:#10b981">Verse</div>
-            <div class="palette-item" draggable="true" data-type="Chorus" ondragstart="evDragStart(event)"
-                style="border-color:#f43f5e">Chorus</div>
-            <div class="palette-item" draggable="true" data-type="Solo" ondragstart="evDragStart(event)"
-                style="border-color:#f59e0b">Solo</div>
+            <div class="palette-item" draggable="true" onclick="addSec('Intro')" data-type="Intro"
+                ondragstart="evDragStart(event)" style="border-color:#3b82f6">Intro</div>
+            <div class="palette-item" draggable="true" onclick="addSec('Verse')" data-type="Verse"
+                ondragstart="evDragStart(event)" style="border-color:#10b981">Verse</div>
+            <div class="palette-item" draggable="true" onclick="addSec('Chorus')" data-type="Chorus"
+                ondragstart="evDragStart(event)" style="border-color:#f43f5e">Chorus</div>
+            <div class="palette-item" draggable="true" onclick="addSec('Solo')" data-type="Solo"
+                ondragstart="evDragStart(event)" style="border-color:#f59e0b">Solo</div>
 
-            <div class="side-label" style="margin-top:20px;">Clipboard</div>
             <button class="btn" id="pasteBtn" onclick="pasteSec()"
-                style="background:var(--surface-h); width:100%; border:1px solid var(--border);" disabled>📋 Paste
-                Sec</button>
-
+                style="background:var(--surface-h); min-width:80px; border:1px solid var(--border);" disabled>📋
+                Paste</button>
             <button class="btn" onclick="addCustom()"
-                style="background:none; border:1px dashed #444; color:var(--muted); width:100%; margin-top:auto;">+
-                Custom</button>
+                style="background:none; border:1px dashed #444; color:var(--muted); min-width:80px;">+ Custom</button>
         </div>
 
         <div class="timeline" id="timeline" ondragover="event.preventDefault()" ondrop="evDrop(event)">
             <div id="content"></div>
             <div id="hint"
                 style="text-align:center; padding:60px; color:var(--muted); border:2px dashed var(--border); border-radius:20px; margin-top:20px; user-select:none;">
-                ドラッグ＆ドロップでセクションを追加
+                サイドバーの項目をタップ、またはドラッグして追加
             </div>
         </div>
     </div>
@@ -414,7 +471,8 @@
     <script>
         let songData = [];
         let isPlaying = false, playTimer = null;
-        let playState = { s: 0, m: 0, b: -1 };
+        // s:section, m:measure, b:beat, r:repeat count(現在何周目か)
+        let playState = { s: 0, m: 0, b: -1, r: 1 };
         let editing = { s: 0, m: 0, b: 0, root: 'C', suf: '' };
         let clipboard = null;
 
@@ -442,6 +500,9 @@
                 card.ondragstart = (e) => { e.dataTransfer.setData('moveIdx', sIdx); card.style.opacity = '0.4'; };
                 card.ondragend = () => card.style.opacity = '1';
 
+                // repeat値がない古いデータ用のフォールバック
+                if (!sec.repeat) sec.repeat = 1;
+
                 card.innerHTML = `
                 <div class="section-header">
                     <div class="section-title-area">
@@ -449,6 +510,9 @@
                         <span style="font-weight:900; color:${color}">${sec.type}</span>
                     </div>
                     <div class="sec-ctrl">
+                        <span style="font-size:0.8rem; color:var(--muted); margin-right:2px;">Loop:</span>
+                        <input type="number" min="1" max="99" value="${sec.repeat}" class="repeat-input" onchange="changeRepeat(${sIdx}, this.value)">
+                        
                         <select class="beat-select" onchange="changeSecBeats(${sIdx}, this.value)">
                             <option value="2" ${sec.beats == 2 ? 'selected' : ''}>2/4</option>
                             <option value="3" ${sec.beats == 3 ? 'selected' : ''}>3/4</option>
@@ -475,7 +539,6 @@
                     </div>
                     <div class="beats-row" style="grid-template-columns: repeat(${sec.beats > 4 ? sec.beats / 2 : sec.beats}, 1fr)"></div>
                 `;
-                    // 8拍子の時は2段に (8/8 -> 4列x2行)
                     if (sec.beats > 4) {
                         mDiv.querySelector('.beats-row').style.gridTemplateColumns = `repeat(4, 1fr)`;
                     }
@@ -492,7 +555,7 @@
                     grid.appendChild(mDiv);
                 });
                 const addM = document.createElement('div');
-                addM.className = 'beat-slot'; addM.style.height = '90px'; addM.style.border = '2px dashed #2d3748'; addM.innerText = '＋ ADD MEASURE';
+                addM.className = 'beat-slot'; addM.style.height = '90px'; addM.style.border = '2px dashed #2d3748'; addM.innerText = '＋';
                 addM.onclick = () => { songData[sIdx].measures.push(new Array(sec.beats).fill('')); render(); };
                 grid.appendChild(addM);
                 cont.appendChild(card);
@@ -501,6 +564,25 @@
         }
 
         // --- Section Management ---
+        // タップ・クリックでの追加用関数
+        function addSec(type) {
+            songData.push({ type: type, beats: 4, repeat: 1, measures: [['', '', '', '']] });
+            render();
+            // 自動で一番下へスクロール
+            setTimeout(() => {
+                const el = document.getElementById('timeline');
+                el.scrollTop = el.scrollHeight;
+            }, 100);
+        }
+
+        function changeRepeat(sIdx, val) {
+            let v = parseInt(val);
+            if (v < 1) v = 1;
+            songData[sIdx].repeat = v;
+            // 再レンダリングしないとinputの値が戻ってしまうことがあるため(簡易)
+            // ここではあえてrenderせずデータだけ更新
+        }
+
         function changeSecBeats(sIdx, val) {
             const newBeats = parseInt(val);
             songData[sIdx].beats = newBeats;
@@ -514,7 +596,7 @@
 
         function copySec(idx) {
             clipboard = JSON.parse(JSON.stringify(songData[idx]));
-            render(); // Update button state
+            render();
         }
 
         function pasteSec() {
@@ -529,7 +611,10 @@
             e.preventDefault();
             const addType = e.dataTransfer.getData('addType');
             const moveIdx = e.dataTransfer.getData('moveIdx');
-            if (addType) { songData.push({ type: addType, beats: 4, measures: [['', '', '', '']] }); }
+            if (addType) {
+                // Drag Dropでの追加
+                songData.push({ type: addType, beats: 4, repeat: 1, measures: [['', '', '', '']] });
+            }
             else if (moveIdx !== "") {
                 const target = e.target.closest('.section-card');
                 if (target) {
@@ -545,7 +630,7 @@
             const t = idx + dir;
             if (t >= 0 && t < songData.length) { [songData[idx], songData[t]] = [songData[t], songData[idx]]; render(); }
         }
-        function addCustom() { const n = prompt("Section Name?"); if (n) { songData.push({ type: n, beats: 4, measures: [['', '', '', '']] }); render(); } }
+        function addCustom() { const n = prompt("Section Name?"); if (n) addSec(n); }
         function remSec(i) { if (confirm("Delete this section?")) { songData.splice(i, 1); render(); } }
         function remMeas(s, m) { songData[s].measures.splice(m, 1); render(); }
 
@@ -592,12 +677,14 @@
             closePicker();
         }
 
-        // --- Audio Engine (Precision Update) ---
+        // --- Audio Engine (Loop & Precision) ---
         function togglePlay() { isPlaying ? stop() : play(); }
         function play() {
             if (!songData.length) return;
             isPlaying = true; document.getElementById('playBtn').innerText = '■ STOP'; document.getElementById('playBtn').className = 'btn btn-stop';
-            playState = { s: 0, m: 0, b: -1 }; playLoop();
+            // 再生開始時: Section=0, Measure=0, Beat=-1, Repeat=1
+            playState = { s: 0, m: 0, b: -1, r: 1 };
+            playLoop();
         }
         function stop() {
             isPlaying = false; clearTimeout(playTimer);
@@ -610,35 +697,57 @@
             if (!currentSec) { stop(); return; }
 
             playState.b++;
-            if (playState.b >= currentSec.beats) { playState.b = 0; playState.m++; }
-            if (playState.m >= currentSec.measures.length) { playState.m = 0; playState.s++; }
+            // 拍が進みきったら次の小節へ
+            if (playState.b >= currentSec.beats) {
+                playState.b = 0;
+                playState.m++;
+            }
 
+            // 小節が進みきったら...
+            if (playState.m >= currentSec.measures.length) {
+                // まだリピート回数が残っているか確認
+                const maxRepeat = currentSec.repeat || 1;
+                if (playState.r < maxRepeat) {
+                    // リピート続行：小節を最初に戻し、周回カウントを増やす
+                    playState.m = 0;
+                    playState.r++;
+                } else {
+                    // 次のセクションへ
+                    playState.m = 0;
+                    playState.s++;
+                    playState.r = 1; // 次のセクションのために周回カウントリセット
+                }
+            }
+
+            // セクション移動後にデータがあるか再チェック
             if (!songData[playState.s]) { stop(); return; }
 
+            // --- UI更新 ---
             document.querySelectorAll('.current').forEach(e => e.classList.remove('current'));
+
+            // 小節の頭のタイミングでアクティブ表示更新
             if (playState.b === 0) {
                 document.querySelectorAll('.active').forEach(e => e.classList.remove('active'));
                 const m = document.getElementById(`m-${playState.s}-${playState.m}`);
-                if (m) { m.classList.add('active'); m.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                if (m) {
+                    m.classList.add('active');
+                    m.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
             }
             const b = document.getElementById(`b-${playState.s}-${playState.m}-${playState.b}`);
             if (b) b.classList.add('current');
 
-            // --- タイミング計算ロジック (NEW) ---
-            // 基本の4分音符の間隔
+            // --- タイミング計算 ---
             let interval = (60 / document.getElementById('bpm').value) * 1000;
-
-            // セクションの拍数が 6 or 8 の場合、分母は8(8分音符)とみなす
-            // そのため、再生間隔を半分(0.5倍)にして速く進める
-            if (currentSec.beats === 6 || currentSec.beats === 8) {
-                interval = interval * 0.5;
+            if (songData[playState.s].beats === 6 || songData[playState.s].beats === 8) {
+                interval = interval * 0.5; // 8分音符カウントの場合は倍速
             }
 
             playTimer = setTimeout(playLoop, interval);
         }
 
         // --- Data Storage ---
-        const KEY = 'chordFlow_precision_v6';
+        const KEY = 'chordFlow_loop_v7';
         function saveSong() {
             const n = prompt("Song Title?"); if (!n) return;
             const lib = JSON.parse(localStorage.getItem(KEY) || '{}');
